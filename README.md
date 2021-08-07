@@ -1,4 +1,4 @@
-# finetune_GPT_NEO
+# Finetune_GPTNEO_GPTJ6B
 
 ## Overview
 
