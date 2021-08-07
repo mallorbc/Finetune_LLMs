@@ -1,0 +1,4 @@
+git+git://github.com/huggingface/transformers
+datasets
+wandb
+deepspeed
