@@ -12,7 +12,7 @@ This repo contains code to download and convert GPT-J-6B into a Pytorch usable f
 
 ## Walkthrough
 
-See the video [here](google.com) for a video tutorial
+See the video [here](https://www.youtube.com/watch?v=fMgQVQGwnms&ab_channel=Blake) for a video tutorial
 
 1. First create a conda envrionment and enter the environment
 2. Run the ```./install_requirements.sh``` script
