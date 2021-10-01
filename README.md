@@ -6,8 +6,6 @@ This repo contains code to fine-tune GPT-J-6B with a famous quotes dataset. Orig
 
 ```/quotes_dataset``` contains the dataset properly formatted for fine-tuning. See repo for making this dataset [here](https://github.com/mallorbc/GPT_Neo_quotes_dataset)
 
-```/gptneo6B``` contains code to download and convert the model into a format to use with Pytorch
-
 ```/finetuning_repo``` contains code orginally from the repo [here](https://github.com/Xirider/finetune-gpt2xl) that I have modified to work with GPT-J-6B
 
 ## Walkthrough
