@@ -326,11 +326,8 @@ def main():
 
 
     if model_args.model_name_or_path:
-        if model_args.model_name_or_path == "gpt-j-6B":
-            model = GPTNeoForCausalLM.from_pretrained(model_args.model_name_or_path)
-            # model = model.resize_token_embeddings(50257)
-        else:
-            model = AutoModelForCausalLM.from_pretrained(
+
+        model = AutoModelForCausalLM.from_pretrained(
                 model_args.model_name_or_path,
                 from_tf=bool(".ckpt" in model_args.model_name_or_path),
                 config=config,
@@ -340,14 +337,9 @@ def main():
             )
     else:
         logger.info("Training new model from scratch")
-        # print("test1")
         model = AutoModelForCausalLM.from_config(config)
-        # model = GPTNeoForSequenceClassification.from_config(config)
-    if model_args.model_name_or_path != "gpt-j-6B":
+    if model_args.model_name_or_path != "EleutherAI/gpt-j-6B":
         model.resize_token_embeddings(len(tokenizer))
-    # print(model)
-    # print(len(tokenizer))
-    # quit()
 
 
     # Preprocessing the datasets.
