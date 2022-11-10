@@ -48,7 +48,13 @@ from transformers import (
 from transformers import GPTNeoForSequenceClassification
 from transformers.trainer_utils import get_last_checkpoint, is_main_process
 from transformers.utils import check_min_version
+import os
 
+def get_tokens(tokens_file):
+    with open(tokens_file,"r") as f:
+            tokens = f.readlines()
+            tokens = [token.strip() for token in tokens]
+    return tokens
 
 # Will error if the minimal version of Transformers is not installed. Remove at your own risks.
 check_min_version("4.5.0.dev0")
@@ -162,6 +168,16 @@ class DataTrainingArguments:
     preprocessing_num_workers: Optional[int] = field(
         default=None,
         metadata={"help": "The number of processes to use for the preprocessing."},
+    )
+
+    extra_tokens_file: Optional[str] = field(
+        default=None,
+        metadata={"help": "The file containing extra tokens to add to the tokenizer."},
+    )
+
+    group_texts: bool = field(
+        default=False,
+        metadata={"help": "Whether to group texts together when tokenizing"},
     )
 
     def __post_init__(self):
@@ -324,6 +340,15 @@ def main():
             "You can do it from another script, save it, and load it from here, using --tokenizer_name."
         )
 
+    #add pad tokens and resize max length of the tokenizer because the model is trained using GPT2 tokenizer but has a longer max length
+    tokenizer.pad_token = tokenizer.eos_token
+    if data_args.block_size is None:
+        logger.info("Setting `block_size` 2048 since it was not set")
+        tokenizer.model_max_length = 2048
+    else:
+        logger.info("Setting `block_size` to %d", data_args.block_size)
+        tokenizer.model_max_length = data_args.block_size
+
 
     if model_args.model_name_or_path:
 
@@ -338,8 +363,13 @@ def main():
     else:
         logger.info("Training new model from scratch")
         model = AutoModelForCausalLM.from_config(config)
-    if model_args.model_name_or_path != "EleutherAI/gpt-j-6B":
-        model.resize_token_embeddings(len(tokenizer))
+    # if model_args.model_name_or_path != "EleutherAI/gpt-j-6B":
+    if data_args.extra_tokens_file is not None and model_args.model_name_or_path == "EleutherAI/gpt-j-6B":
+        tokens_to_add = get_tokens(os.path.realpath(training_args.extra_tokens_file))
+        tokenizer.add_tokens(tokens_to_add)
+        logger.info("Added %d extra tokens to the tokenizer", len(tokens_to_add))
+
+    model.resize_token_embeddings(len(tokenizer))
 
 
     # Preprocessing the datasets.
@@ -351,7 +381,7 @@ def main():
     text_column_name = "text" if "text" in column_names else column_names[0]
 
     def tokenize_function(examples):
-        return tokenizer(examples[text_column_name])
+        return tokenizer(examples[text_column_name],max_length=tokenizer.model_max_length, padding="max_length", truncation=True)
 
     tokenized_datasets = datasets.map(
         tokenize_function,
@@ -376,6 +406,12 @@ def main():
                 f"({tokenizer.model_max_length}). Using block_size={tokenizer.model_max_length}."
             )
         block_size = min(data_args.block_size, tokenizer.model_max_length)
+
+    # Main data processing function that will make each entry its own in the dataset
+    def single_texts(examples):
+        result = examples
+        result["labels"] = examples["input_ids"].copy()
+        return result
 
     # Main data processing function that will concatenate all texts from our dataset and generate chunks of block_size.
     def group_texts(examples):
@@ -402,12 +438,25 @@ def main():
     # To speed up this part, we use multiprocessing. See the documentation of the map method for more information:
     # https://huggingface.co/docs/datasets/package_reference/main_classes.html#datasets.Dataset.map
 
-    lm_datasets = tokenized_datasets.map(
-        group_texts,
-        batched=True,
-        num_proc=data_args.preprocessing_num_workers,
-        load_from_cache_file=not data_args.overwrite_cache,
-    )
+    if data_args.group_texts:
+        lm_datasets = tokenized_datasets.map(
+            group_texts,
+            batched=True,
+            num_proc=data_args.preprocessing_num_workers,
+            load_from_cache_file=not data_args.overwrite_cache,
+        )
+        logger.info("Grouping texts together")
+
+    else:
+        lm_datasets = tokenized_datasets.map(
+            single_texts,
+            batched=True,
+            num_proc=data_args.preprocessing_num_workers,
+            load_from_cache_file=not data_args.overwrite_cache,
+        )
+        logger.info("Grouping texts into single entries")
+
+
 
     if training_args.do_train:
         if "train" not in tokenized_datasets:
