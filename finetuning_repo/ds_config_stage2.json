@@ -35,6 +35,7 @@
         "reduce_scatter": true,
         "reduce_bucket_size": 2e8,
         "contiguous_gradients": true,
+        "round_robin_gradients": true,
         "cpu_offload": true
     },
     "gradient_accumulation_steps": "auto",
