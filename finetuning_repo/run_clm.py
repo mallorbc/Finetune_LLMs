@@ -51,7 +51,7 @@ from transformers.utils import check_min_version
 import os
 
 os.environ["WANDB_PROJECT"] = "GPT_finetuning"
-os.environ["WANDB_DISABLE_CODE"] = "True"
+os.environ["WANDB_DISABLE_CODE"] = "true"
 
 def get_tokens(tokens_file):
     with open(tokens_file,"r") as f:
