@@ -30,3 +30,5 @@ RUN pip install triton==1.0.0
 RUN DS_BUILD_OPS=1 pip install git+https://github.com/microsoft/DeepSpeed.git@v0.7.7
 
 RUN pip install deepspeed-mii
+
+RUN pip install wandb
