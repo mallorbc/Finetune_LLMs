@@ -1,4 +1,8 @@
-# Guide: Finetune GPT2-XL (1.5 Billion Parameters) and GPT-NEO (2.7 Billion Parameters) on a single GPU with Huggingface Transformers using DeepSpeed
+# New Guide
+
+Each stage of DeepSpeed Zero requires less GPU resources at the cost of speed.  Use 1->3 as you experience lack of memory.
+
+# Original Repo Guide: Finetune GPT2-XL (1.5 Billion Parameters) and GPT-NEO (2.7 Billion Parameters) on a single GPU with Huggingface Transformers using DeepSpeed
 
 
 
