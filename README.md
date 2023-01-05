@@ -8,9 +8,11 @@ This repo contains code to fine-tune GPT-J-6B with a famous quotes dataset. Orig
 
 ```/finetuning_repo``` contains code orginally from the repo [here](https://github.com/Xirider/finetune-gpt2xl) that I have modified to work with GPT-J-6B
 
-## Walkthrough
+## Old Video Walkthroughs
 
-See the video for orignal repo code [here](https://www.youtube.com/watch?v=fMgQVQGwnms&ab_channel=Blake) for a video tutorial
+See the video for orignal repo code [here](https://www.youtube.com/watch?v=fMgQVQGwnms&ab_channel=Blake) for a video tutorial.
+
+A more updated video for using the Huggingface model can be seen[here](https://www.youtube.com/watch?v=bLMbnHunL_E&t=75s)
 
 1. First create a conda envrionment and enter the environment
 2. Run the ```./install_requirements.sh``` script
