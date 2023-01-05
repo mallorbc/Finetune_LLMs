@@ -19,3 +19,13 @@ A more updated video for using the Huggingface model can be seen[here](https://w
 3. Then you want to copy the data from ```train.csv``` and ```validation.csv``` from ```/quotes_dataset``` to the ```/finetuning_repo``` folder
 4. Run the finetuning code with appropriate flags to fine tune the model. See ```example_run.txt```
 
+## Updated Docker Walkthrough
+
+The updated walkthrough uses nvidia docker to take the headache out of much of the process.
+
+### Requirements
+1. A sufficient Nvidia GPU(typically at least 24GB of VRAM and support for fp16).  If using cloud offerings I reccomend A100.  Though it costs more its speed and VRAM make up for it.
+2. Use a Linux machine.  I reccommend Ubuntu
+3. Sufficiently modern version of docker(when in doubt update to latest)
+4. nvidia-docker to allow GPU passthrough the the docker container. See install guide [here](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/install-guide.html)
+5. Make sure you have the lastest nvidia drivers installed. Check out the tool [here](https://www.nvidia.com/download/index.aspx)
