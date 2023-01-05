@@ -10,14 +10,14 @@ This repo contains code to fine-tune GPT-J-6B with a famous quotes dataset. Orig
 
 ## Old Video Walkthroughs
 
-See the video for orignal repo code [here](https://www.youtube.com/watch?v=fMgQVQGwnms&ab_channel=Blake) for a video tutorial.
+See the old video for orignal repo code [here](https://www.youtube.com/watch?v=fMgQVQGwnms&ab_channel=Blake) for a video tutorial.
 
-A more updated video for using the Huggingface model can be seen[here](https://www.youtube.com/watch?v=bLMbnHunL_E&t=75s)
+A more updated video for using the Huggingface model can be seen [here](https://www.youtube.com/watch?v=bLMbnHunL_E&t=75s)
 
 1. First create a conda envrionment and enter the environment
 2. Run the ```./install_requirements.sh``` script
 3. Then you want to copy the data from ```train.csv``` and ```validation.csv``` from ```/quotes_dataset``` to the ```/finetuning_repo``` folder
-4. Run the finetuning code with appropriate flags to fine tune the model. See ```example_run.txt```
+4. Run the finetuning code with appropriate flags to fine tune the model. See ```example_run.txt``` inside the ```finetuning_repo```
 
 ## Updated Docker Walkthrough
 
