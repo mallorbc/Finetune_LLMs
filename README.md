@@ -29,3 +29,9 @@ The updated walkthrough uses nvidia docker to take the headache out of much of t
 3. Sufficiently modern version of docker(when in doubt update to latest)
 4. nvidia-docker to allow GPU passthrough the the docker container. See install guide [here](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/install-guide.html)
 5. Make sure you have the lastest nvidia drivers installed. Check out the tool [here](https://www.nvidia.com/download/index.aspx)
+
+### Usage
+
+1. First, build the docker image by running ```build_image.sh```.  If you recieve an error about not being able to find the docker image, update to a newer cuda version.  The images are periodically depreacated.  Then open a PR so you can fix this issue for others.  Building the docker image can take many minutes.
+2. Run ```run_image.sh```.  This script runs the docker image that was just built and mounts the current directory to ```/workspace``` inside of the docker container.  All GPUs in the system will be passed through.  Additionally, to prevent downloading models each time this container is ran, your ```.cache``` will also be passed through.
+3. This image can now be used for finetuning a model with GPUs, or for using DeepSpeed inference.  Navigate to another folder for more information
