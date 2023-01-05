@@ -1,14 +1,32 @@
-# New Guide
+# New Guide Using Docker
 
-Each stage of DeepSpeed Zero requires less GPU resources at the cost of speed.  Use 1->3 as you experience lack of memory.
+## DeepSpeed
 
-```wandb``` is now supported.  To disable, set environment variable ```WANDB_DISABLED``` to ```true```.
+DeepSpeed is an easy-to-use deep learning optimization software suite that enables unprecedented scale and speed for Deep Learning Training and Inference.  Learn more about DeepSpeed [here](https://github.com/microsoft/DeepSpeed) and [here](https://www.deepspeed.ai/) and [here](https://huggingface.co/docs/transformers/main_classes/deepspeed)
+
+Each stage of DeepSpeed Zero requires less GPU resources at the cost of speed.  Use 1->3 as you experience lack of memory or need more resources to train.
+
+```ds_config_stage1.json```, ```ds_config_stage2.json``` and ```ds_config_stage3.json``` are all configs that I have used depending on what system I am on and what model I am trying to train. 
+
+## Wandb
+
+Wandb is a tool used to track and visualize all the pieces of your machine learning pipeline, from datasets to production models.  See more [here](https://github.com/wandb/wandb) and [here](https://wandb.ai/)
+
+This is a tool that can give you a nice web interface to track the loss values while training.  Alternatively, you could use a log file which I will go over under running.
+
+To disable wandb, set environment variable ```WANDB_DISABLED``` to ```true```.
+
+To do so run this:
+
+```export WANDB_DISABLED=true```
 
 To use, be sure to login using ```wandb login```
 
+After logging in, you will be given a link that gives you a token, copy and paste that token into the terminal.
+
 # Original Repo Guide: Finetune GPT2-XL (1.5 Billion Parameters) and GPT-NEO (2.7 Billion Parameters) on a single GPU with Huggingface Transformers using DeepSpeed
 
-
+This was the README for which I modified the code from. Some useful insight may be here.
 
 - Finetuning large language models like GPT2-xl is often difficult, as these models are too big to fit on a single GPU.
 - This guide explains how to finetune GPT2-xl and GPT-NEO (2.7B Parameters) with just one command of the Huggingface Transformers library on a single GPU.
