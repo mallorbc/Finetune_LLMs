@@ -30,6 +30,18 @@ The updated walkthrough uses nvidia docker to take the headache out of much of t
 4. nvidia-docker to allow GPU passthrough the the docker container. See install guide [here](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/install-guide.html)
 5. Make sure you have the lastest nvidia drivers installed. Check out the tool [here](https://www.nvidia.com/download/index.aspx)
 
+#### Cuda Drivers Example
+
+If you have a 64 bit Linux system, and need drivers for an A100, you can run a command like this to get setup.
+
+```wget https://us.download.nvidia.com/tesla/515.86.01/NVIDIA-Linux-x86_64-515.86.01.run```
+
+You will then run the downloaded program with sudo.
+
+```chmod 777 NVIDIA-Linux-x86_64-515.86.01.run```
+
+```sudo ./NVIDIA-Linux-x86_64-515.86.01.run```
+
 ### Usage
 
 1. First, build the docker image by running ```build_image.sh```.  If you recieve an error about not being able to find the docker image, update to a newer cuda version.  The images are periodically depreacated.  Then open a PR so you can fix this issue for others.  Building the docker image can take many minutes.
