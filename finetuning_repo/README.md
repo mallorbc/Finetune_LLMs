@@ -52,6 +52,7 @@ The ```learning_rate``` at 5e-6 is good, but you could start higher and decay by
 
 I try to have ```gradient_accumulation_steps```, ```per_device_train_batch_size``` and ```num_gpus``` multipy to 32.  Larger product from these flags can allow a larger learning rate, but typically larger batch sizes generalize worse, see [here](https://arxiv.org/pdf/1609.04836.pdf).  This will will need to be experimentally determined.  Going smaller than a 32 product may be a good idea.
 
+Using ```weight_decay``` may be a good idea as well to help the model generalize.  A value of 0.1 was used during pretraining.
 
 
 # Original Repo Guide: Finetune GPT2-XL (1.5 Billion Parameters) and GPT-NEO (2.7 Billion Parameters) on a single GPU with Huggingface Transformers using DeepSpeed
