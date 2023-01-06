@@ -60,7 +60,7 @@ Using ```weight_decay``` may be a good idea as well to help the model generalize
 deepspeed --num_gpus=1 run_clm.py --deepspeed ds_config_stage3.json --model_name_or_path EleutherAI/gpt-j-6B --train_file train.csv --validation_file validation.csv --do_train --do_eval --fp16 --overwrite_cache --evaluation_strategy=steps --output_dir finetuned --num_train_epochs 12  --eval_steps 20 --gradient_accumulation_steps 32 --per_device_train_batch_size 1 --use_fast_tokenizer False --learning_rate 5e-06 --warmup_steps 10 --save_total_limit 1 --save_steps 20 --save_strategy steps --tokenizer_name gpt2 --load_best_model_at_end=True --block_size=2048 --report_to=wandb
 ```
 
-To change what model you run, simply change ```--model_name_or_path EleutherAI/gpt-j-6B```.  Models that been tested include GPT Neo 1.3B 2.7B and GPTJ
+To change what model you run, simply change ```--model_name_or_path```.  Models that been tested include GPT Neo 1.3B 2.7B and GPTJ
 
 
 # Original Repo Guide: Finetune GPT2-XL (1.5 Billion Parameters) and GPT-NEO (2.7 Billion Parameters) on a single GPU with Huggingface Transformers using DeepSpeed
