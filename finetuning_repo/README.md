@@ -1,6 +1,71 @@
-# Guide: Finetune GPT2-XL (1.5 Billion Parameters) and GPT-NEO (2.7 Billion Parameters) on a single GPU with Huggingface Transformers using DeepSpeed
+# New Guide Using Docker
+
+## DeepSpeed
+
+DeepSpeed is an easy-to-use deep learning optimization software suite that enables unprecedented scale and speed for Deep Learning Training and Inference.  Learn more about DeepSpeed [here](https://github.com/microsoft/DeepSpeed) and [here](https://www.deepspeed.ai/) and [here](https://huggingface.co/docs/transformers/main_classes/deepspeed)
+
+Each stage of DeepSpeed Zero requires less GPU resources at the cost of speed.  Use 1->3 as you experience lack of memory or need more resources to train.
+
+```ds_config_stage1.json```, ```ds_config_stage2.json``` and ```ds_config_stage3.json``` are all configs that I have used depending on what system I am on and what model I am trying to train. 
+
+## Wandb
+
+Wandb is a tool used to track and visualize all the pieces of your machine learning pipeline, from datasets to production models.  See more [here](https://github.com/wandb/wandb) and [here](https://wandb.ai/)
+
+This is a tool that can give you a nice web interface to track the loss values while training.  Alternatively, you could use a log file which I will go over under running.
+
+To disable wandb, set environment variable ```WANDB_DISABLED``` to ```true```.
+
+To do so run this:
+
+```export WANDB_DISABLED=true```
+
+To use, be sure to login using ```wandb login```
+
+After logging in, you will be given a link that gives you a token, copy and paste that token into the terminal.
+
+## Preparing A Dataset
+
+Preparing a dataset is a very important step to finetuning.  There are several ways to go about preparing the dataset.  Those include corpus model or individual entries mode.  
+
+Corpus mode is easier, you just have many pieces of text and arange the dataset into a csv file under a column called ```text```.  This would be good for things like code, books, etc.  You could also use this mode for allowing few-shot learning, where other entries may provide guidance to solve other problems.  Something to note, is that when running in corpus mode, the program will split entries in half in order to fill the ```--block_size``` window.  If that is acceptable, consider this mode.
+
+Individual entries mode means you include ```<|endoftext|>``` tokens to seperate entries.  This means that entries contain one example with padding, which is useful for zero shot problems or problems that can not be split in half in still make sense.
+
+You can find more information on creating a dataset from this [video](https://www.youtube.com/watch?v=07ppAKvOhqk&ab_channel=Brillibits)
+
+If you want to run in individual entries model, you do not need to run finetuning with any special flags and the indivual entries will be padded.  If you want to run in corpus mode, you need to run with the ```--group_texts``` flag, which will combine entries as needed.
+
+## Finetuning Model
+
+Training and finetuning a model is equal parts art and science.  If you want the best model possible, you are going to need to do a hyperparamter sweep, meaning run with many different learning rates, weight decay, etc.
+
+The values and flags in the ```example_run.txt``` are a good starting point.  Training arguments that are supported include those use in the ```transformers``` library.  See [here](https://huggingface.co/docs/transformers/v4.25.1/en/main_classes/trainer#transformers.TrainingArguments) for all possible flags.
+
+This repo uses GPUs, but it may be worthwhile to look at what the orginal TPU [project](https://github.com/kingoflolz/mesh-transformer-jax/blob/master/howto_finetune.md) suggests for finetuning.
+
+Some extra important settings are the ```learning_rate```, ```block_size```, ```gradient_accumulation_steps```, ```per_device_train_batch_size```, ```num_gpus``` and ```group_texts```.  
+
+If you tasks never needs more than say, 512 tokens, by decreasing the ```block_size``` arg, you can reduce the memory consumption and thus have a large batch size.  
+
+The ```learning_rate``` at 5e-6 is good, but you could start higher and decay by 10x.  
+
+I try to have ```gradient_accumulation_steps```, ```per_device_train_batch_size``` and ```num_gpus``` multipy to 32.  Larger product from these flags can allow a larger learning rate, but typically larger batch sizes generalize worse, see [here](https://arxiv.org/pdf/1609.04836.pdf).  This will will need to be experimentally determined.  Going smaller than a 32 product may be a good idea.
+
+Using ```weight_decay``` may be a good idea as well to help the model generalize.  A value of 0.1 was used during pretraining.
+
+### Example
+
+```
+deepspeed --num_gpus=1 run_clm.py --deepspeed ds_config_stage3.json --model_name_or_path EleutherAI/gpt-j-6B --train_file train.csv --validation_file validation.csv --do_train --do_eval --fp16 --overwrite_cache --evaluation_strategy=steps --output_dir finetuned --num_train_epochs 12  --eval_steps 20 --gradient_accumulation_steps 32 --per_device_train_batch_size 1 --use_fast_tokenizer False --learning_rate 5e-06 --warmup_steps 10 --save_total_limit 1 --save_steps 20 --save_strategy steps --tokenizer_name gpt2 --load_best_model_at_end=True --block_size=2048 --report_to=wandb
+```
+
+To change what model you run, simply change ```--model_name_or_path```.  Models that been tested include GPT Neo 1.3B 2.7B and GPTJ
 
 
+# Original Repo Guide: Finetune GPT2-XL (1.5 Billion Parameters) and GPT-NEO (2.7 Billion Parameters) on a single GPU with Huggingface Transformers using DeepSpeed
+
+This was the README for which I modified the code from. Some useful insight may be here.
 
 - Finetuning large language models like GPT2-xl is often difficult, as these models are too big to fit on a single GPU.
 - This guide explains how to finetune GPT2-xl and GPT-NEO (2.7B Parameters) with just one command of the Huggingface Transformers library on a single GPU.

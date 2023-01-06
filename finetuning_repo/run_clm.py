@@ -51,6 +51,9 @@ from transformers.utils import check_min_version
 from transformers import GPTNeoXForCausalLM, GPTNeoXTokenizerFast
 import os
 
+os.environ["WANDB_PROJECT"] = "GPT_finetuning"
+os.environ["WANDB_DISABLE_CODE"] = "true"
+
 def get_tokens(tokens_file):
     with open(tokens_file,"r") as f:
             tokens = f.readlines()
@@ -369,7 +372,7 @@ def main():
         model = AutoModelForCausalLM.from_config(config)
     # if model_args.model_name_or_path != "EleutherAI/gpt-j-6B":
     if data_args.extra_tokens_file is not None and model_args.model_name_or_path == "EleutherAI/gpt-j-6B":
-        tokens_to_add = get_tokens(os.path.realpath(training_args.extra_tokens_file))
+        tokens_to_add = get_tokens(os.path.realpath(data_args.extra_tokens_file))
         tokenizer.add_tokens(tokens_to_add)
         logger.info("Added %d extra tokens to the tokenizer", len(tokens_to_add))
 
