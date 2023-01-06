@@ -51,7 +51,8 @@ from transformers.utils import check_min_version
 from transformers import GPTNeoXForCausalLM, GPTNeoXTokenizerFast
 import os
 
-os.environ["WANDB_PROJECT"] = "GPT_finetuning"
+if "WANDB_PROJECT" not in os.environ:
+    os.environ["WANDB_PROJECT"] = "GPT_finetuning"
 os.environ["WANDB_DISABLE_CODE"] = "true"
 
 def get_tokens(tokens_file):
