@@ -50,7 +50,7 @@ If you tasks never needs more than say, 512 tokens, by decreasing the ```block_s
 
 The ```learning_rate``` at 5e-6 is good, but you could start higher and decay by 10x.  
 
-I try to have ```gradient_accumulation_steps```, ```per_device_train_batch_size``` and ```num_gpus``` multipy to 32.  Larger product from these flags can allow a larger learning rate, but typically larger batch sizes generalize worse, see [here](https://arxiv.org/pdf/1609.04836.pdf).  This will will need to be experimentally determined.
+I try to have ```gradient_accumulation_steps```, ```per_device_train_batch_size``` and ```num_gpus``` multipy to 32.  Larger product from these flags can allow a larger learning rate, but typically larger batch sizes generalize worse, see [here](https://arxiv.org/pdf/1609.04836.pdf).  This will will need to be experimentally determined.  Going smaller than a 32 product may be a good idea.
 
 
 
