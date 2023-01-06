@@ -48,6 +48,7 @@ from transformers import (
 from transformers import GPTNeoForSequenceClassification
 from transformers.trainer_utils import get_last_checkpoint, is_main_process
 from transformers.utils import check_min_version
+from transformers import GPTNeoXForCausalLM, GPTNeoXTokenizerFast
 import os
 
 def get_tokens(tokens_file):
@@ -331,8 +332,11 @@ def main():
         tokenizer = AutoTokenizer.from_pretrained(
             model_args.tokenizer_name, **tokenizer_kwargs)
     elif model_args.model_name_or_path:
-        tokenizer = AutoTokenizer.from_pretrained(
-            model_args.model_name_or_path, **tokenizer_kwargs)
+        if model_args.model_name_or_path == "EleutherAI/gpt-neox-20b":
+            tokenizer = GPTNeoXTokenizerFast.from_pretrained("EleutherAI/gpt-neox-20b")        
+        else:
+            tokenizer = AutoTokenizer.from_pretrained(
+                model_args.model_name_or_path, **tokenizer_kwargs)
 
     else:
         raise ValueError(
