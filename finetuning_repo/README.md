@@ -46,7 +46,7 @@ This repo uses GPUs, but it may be worthwhile to look at what the orginal TPU [p
 
 Some extra important settings are the ```learning_rate```, ```block_size```, ```gradient_accumulation_steps```, ```per_device_train_batch_size```, ```num_gpus``` and ```group_texts```.  
 
-If you tasks never needs more than say, 512 tokens, by decreasing the ```block_size arg```, you can reduce the memory consumption and thus have a large batch size.  
+If you tasks never needs more than say, 512 tokens, by decreasing the ```block_size``` arg, you can reduce the memory consumption and thus have a large batch size.  
 
 The ```learning_rate``` at 5e-6 is good, but you could start higher and decay by 10x.  
 
