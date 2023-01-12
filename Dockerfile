@@ -1,4 +1,4 @@
-FROM nvidia/cuda:11.6.1-devel-ubuntu20.04
+FROM nvidia/cuda:11.7.1-devel-ubuntu20.04
 
 ARG DEBIAN_FRONTEND=noninteractive
 
@@ -19,7 +19,7 @@ RUN apt install python3.9 -y \
 && apt install python3-pip -y \
 && apt install python-is-python3 -y
 
-RUN pip install torch torchvision torchaudio --extra-index-url https://download.pytorch.org/whl/cu116
+RUN pip install torch torchvision torchaudio
 
 RUN pip install datasets \ 
 && pip install transformers \ 
