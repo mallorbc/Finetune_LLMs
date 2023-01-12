@@ -32,3 +32,5 @@ RUN DS_BUILD_OPS=1 pip install git+https://github.com/microsoft/DeepSpeed.git@v0
 RUN pip install deepspeed-mii
 
 RUN pip install wandb
+
+WORKDIR /workspace
