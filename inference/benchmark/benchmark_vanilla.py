@@ -12,7 +12,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
     
 
-    model = AutoModelForCausalLM.from_pretrained(args.model_name,torch_dtype=torch.float16)
+    model = AutoModelForCausalLM.from_pretrained(args.model_name,torch_dtype=torch.float16).cuda()
     tokenizer = AutoTokenizer.from_pretrained(args.model_name)
 
     input_text = ""
@@ -22,7 +22,8 @@ if __name__ == "__main__":
         total_times = []
         for i in range(args.num_samples):
             start = time.time()
-            result = model.generate(input_ids=tokenizer.encode(input_text, return_tensors="pt"), do_sample=False, max_length=number_of_tokens,min_length=number_of_tokens)
+            input_ids = tokenizer(input_text, return_tensors="pt").input_ids.cuda()
+            result = model.generate(input_ids, do_sample=False, max_length=number_of_tokens,min_length=number_of_tokens)
             end = time.time()
             total_times.append(end-start)
         print(f"Number of tokens: {number_of_tokens} | Average time: {np.mean(total_times)} | Standard Deviation: {np.std(total_times)}")
