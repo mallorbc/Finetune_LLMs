@@ -10,8 +10,8 @@ if __name__ == "__main__":
 
     generator = mii.mii_query_handle("deployment")
 
-    input_text = ""
-    tokens_to_try = [1,2,4,8,16,32,64,128,256,512,1024,2048]
+    input_text = "<|endoftext|>"
+    tokens_to_try = [4,8,16,32,64,128,256,512,1024,2048]
     for i in range(len(tokens_to_try)):
         number_of_tokens = tokens_to_try[i]
         total_times = []
