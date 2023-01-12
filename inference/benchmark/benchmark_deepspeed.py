@@ -30,17 +30,25 @@ if __name__ == "__main__":
                                             max_tokens=2048,
                         replace_with_kernel_inject=True)
     torch.cuda.synchronize()
-    input_text = "<|endoftext|>"
-    tokens_to_try = [4,8,16,32,64,128,256,512,1024,2048]
-    for i in range(len(tokens_to_try)):
-        number_of_tokens = tokens_to_try[i]
-        total_times = []
-        for i in range(args.num_samples):
-            start = time.time()
-            string = generator(input_text,do_sample=False, max_length=number_of_tokens,min_length=number_of_tokens)
-            end = time.time()
-            total_times.append(end-start)
-        print(f"Number of tokens: {number_of_tokens} | Average time: {np.mean(total_times)} | Standard Deviation: {np.std(total_times)}")
+    input_text = "<|endoftext|> Hi"
+    tokens_to_try = [8,16,32,64,128,256,512,1024,2048]
+    total_number_of_runs = 0
+    try:
+        for i in range(len(tokens_to_try)):
+            number_of_tokens = tokens_to_try[i]
+            total_times = []
+            for i in range(args.num_samples):
+                start = time.time()
+                string = generator(input_text,do_sample=False, max_length=number_of_tokens,min_length=number_of_tokens)
+                print(string)
+                end = time.time()
+                total_times.append(end-start)
+                total_number_of_runs += 1
+
+            print(f"Run number: {total_number_of_runs} | Number of tokens: {number_of_tokens} | Average time: {np.mean(total_times)} | Standard Deviation: {np.std(total_times)}")
+    except Exception as e:
+        print(e)
+        print(f"Run Number: {total_number_of_runs}")
 
 
 
