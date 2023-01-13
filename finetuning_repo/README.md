@@ -42,6 +42,8 @@ You can find more information on creating a dataset from this [video](https://ww
 
 If you want to run in individual entries model, you do not need to run finetuning with any special flags and the indivual entries will be padded.  If you want to run in corpus mode, you need to run with the ```--group_texts``` flag, which will combine entries as needed.
 
+If you want to add tokens to the tokenizer, use the ```--extra_tokens_file``` flag.  Have the flag point to a text file that has the extra tokens you want to add.  Each token should be on its own line.  Currenly this is only support for GPTJ, as is has extra room in its output dimensions to make this work.
+
 ## Finetuning Model
 
 Training and finetuning a model is equal parts art and science.  If you want the best model possible, you are going to need to do a hyperparamter sweep, meaning run with many different learning rates, weight decay, etc.
