@@ -40,10 +40,6 @@ Individual entries mode means you include ```<|endoftext|>``` tokens to seperate
 
 You can find more information on creating a dataset from this [video](https://www.youtube.com/watch?v=07ppAKvOhqk&ab_channel=Brillibits)
 
-If you want to run in individual entries model, you do not need to run finetuning with any special flags and the indivual entries will be padded.  If you want to run in corpus mode, you need to run with the ```--group_texts``` flag, which will combine entries as needed.
-
-If you want to add tokens to the tokenizer, use the ```--extra_tokens_file``` flag.  Have the flag point to a text file that has the extra tokens you want to add.  Each token should be on its own line.  Currenly this is only support for GPTJ, as is has extra room in its output dimensions to make this work.
-
 ## Finetuning Model
 
 Training and finetuning a model is equal parts art and science.  If you want the best model possible, you are going to need to do a hyperparamter sweep, meaning run with many different learning rates, weight decay, etc.
@@ -52,13 +48,17 @@ The values and flags in the ```example_run.txt``` are a good starting point.  Tr
 
 This repo uses GPUs, but it may be worthwhile to look at what the orginal TPU [project](https://github.com/kingoflolz/mesh-transformer-jax/blob/master/howto_finetune.md) suggests for finetuning.
 
-Some extra important settings are the ```learning_rate```, ```block_size```, ```gradient_accumulation_steps```, ```per_device_train_batch_size```, ```num_gpus``` and ```group_texts```.  
+Some extra important settings are the ```learning_rate```, ```block_size```, ```gradient_accumulation_steps```, ```per_device_train_batch_size```, ```num_gpus```, ```extra_tokens_file``` and ```group_texts```.  
 
 If you tasks never needs more than say, 512 tokens, by decreasing the ```block_size``` arg, you can reduce the memory consumption and thus have a large batch size.  
 
 The ```learning_rate``` at 5e-6 is good, but you could start higher and decay by 10x.  
 
 I try to have ```gradient_accumulation_steps```, ```per_device_train_batch_size``` and ```num_gpus``` multipy to 32.  Larger product from these flags can allow a larger learning rate, but typically larger batch sizes generalize worse, see [here](https://arxiv.org/pdf/1609.04836.pdf).  This will will need to be experimentally determined.  Going smaller than a 32 product may be a good idea.
+
+If you want to add tokens to the tokenizer, use the ```--extra_tokens_file``` flag.  Have the flag point to a text file that has the extra tokens you want to add.  Each token should be on its own line.  Currenly this is only support for GPTJ, as is has extra room in its output dimensions to make this work.
+
+If you want to run in individual entries model, you do not need to run finetuning with any special flags and the indivual entries will be padded.  If you want to run in corpus mode, you need to run with the ```--group_texts``` flag, which will combine entries as needed.
 
 Using ```weight_decay``` may be a good idea as well to help the model generalize.  A value of 0.1 was used during pretraining.
 
