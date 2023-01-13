@@ -40,7 +40,8 @@ if __name__ == "__main__":
             for i in range(args.num_samples):
                 start = time.time()
                 string = generator(input_text,do_sample=False, max_length=number_of_tokens,min_length=number_of_tokens)
-                print(string)
+                if i == args.num_samples-1:
+                    print(string)
                 end = time.time()
                 total_times.append(end-start)
                 total_number_of_runs += 1
