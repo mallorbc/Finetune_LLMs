@@ -24,6 +24,12 @@ To use, be sure to login using ```wandb login```
 
 After logging in, you will be given a link that gives you a token, copy and paste that token into the terminal.
 
+By default any new run will be under the project name ```GPT_finetuning``` but you can change that by setting ```WANDB_PROJECT``` to your own value.
+
+Example:
+
+```export WANDB_PROJECT=Testing```
+
 ## Preparing A Dataset
 
 Preparing a dataset is a very important step to finetuning.  There are several ways to go about preparing the dataset.  Those include corpus model or individual entries mode.  
