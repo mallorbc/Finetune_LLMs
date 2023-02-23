@@ -27,9 +27,9 @@ RUN pip install datasets \
 
 RUN pip install triton==1.0.0
 
-RUN DS_BUILD_OPS=1 pip install git+https://github.com/microsoft/DeepSpeed.git@v0.7.7
+RUN DS_BUILD_OPS=1 pip install git+https://github.com/microsoft/DeepSpeed.git@v0.8.1
 
-RUN pip install git+https://github.com/mallorbc/DeepSpeed-MII.git
+RUN pip install git+https://github.com/microsoft/DeepSpeed-MII.git
 
 RUN pip install wandb
 
