@@ -19,6 +19,10 @@ RUN apt install python3.9 -y \
 && apt install python3-pip -y \
 && apt install python-is-python3 -y
 
+RUN pip install --upgrade pip setuptools wheel
+
+RUN pip install ninja
+
 RUN pip install torch torchvision torchaudio
 
 RUN pip install datasets \ 
@@ -27,7 +31,7 @@ RUN pip install datasets \
 
 RUN pip install triton==1.0.0
 
-RUN DS_BUILD_OPS=1 pip install git+https://github.com/microsoft/DeepSpeed.git@v0.8.0
+RUN pip install git+https://github.com/microsoft/DeepSpeed.git@v0.8.2
 
 RUN pip install git+https://github.com/microsoft/DeepSpeed-MII.git
 
