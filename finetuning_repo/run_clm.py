@@ -350,6 +350,8 @@ def main():
 
     #add pad tokens and resize max length of the tokenizer because the model is trained using GPT2 tokenizer but has a longer max length
     tokenizer.pad_token = tokenizer.eos_token
+    tokenizer.pad_token_id = tokenizer.eos_token_id
+    logger.info("Setting `pad_token` to `eos_token`: %s", tokenizer.eos_token)
     if data_args.block_size is None:
         logger.info("Setting `block_size` 2048 since it was not set")
         tokenizer.model_max_length = 2048
