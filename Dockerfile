@@ -29,7 +29,7 @@ RUN pip install datasets \
 && pip install transformers \ 
 && pip install accelerate
 
-RUN pup install sentencepiece
+RUN pip install sentencepiece
 
 RUN pip install triton==1.0.0
 
