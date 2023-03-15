@@ -3,16 +3,22 @@ import argparse
 import pandas as pd
 import numpy as np
 from tqdm import tqdm
+import os
 
 parser = argparse.ArgumentParser()
 parser.add_argument("-m","--model_name", type=str, default="EleutherAI/gpt-j-6B")
+parser.add_argument("-d","--dataset", type=str, default="./llama/")
 args = parser.parse_args()
 
 
 tokenizer = AutoTokenizer.from_pretrained(args.model_name)
+dataset_dir = os.path.realpath(args.dataset)
 
-train_df = pd.read_csv('./llama/train.csv')
-valid_df = pd.read_csv('./llama/validation.csv')
+train_file = os.path.join(dataset_dir, "train.csv")
+valid_file = os.path.join(dataset_dir, "validation.csv")
+
+train_df = pd.read_csv(train_file)
+valid_df = pd.read_csv(valid_file)
 combined_df = pd.concat([train_df, valid_df])
 
 #loop through each row under text column and tokenize using iterows
