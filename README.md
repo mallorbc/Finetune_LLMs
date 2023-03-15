@@ -1,4 +1,4 @@
-# Finetune_GPTNEO_GPTJ6B
+# Finetune_LLMs
 
 ## Overview
 
