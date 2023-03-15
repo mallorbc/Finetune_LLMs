@@ -29,6 +29,8 @@ RUN pip install datasets \
 && pip install transformers \ 
 && pip install accelerate
 
+RUN pup install sentencepiece
+
 RUN pip install triton==1.0.0
 
 RUN pip install git+https://github.com/microsoft/DeepSpeed.git@v0.8.2
