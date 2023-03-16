@@ -324,7 +324,7 @@ def main():
     config.gradient_checkpointing = True
     config.use_cache = False
 
-    #
+    model_architecture = config.architectures[0]
 
     tokenizer_kwargs = {
         "cache_dir": model_args.cache_dir,
@@ -339,8 +339,11 @@ def main():
         if model_args.model_name_or_path == "EleutherAI/gpt-neox-20b":
             tokenizer = GPTNeoXTokenizerFast.from_pretrained("EleutherAI/gpt-neox-20b")        
         else:
-            tokenizer = AutoTokenizer.from_pretrained(
-                model_args.model_name_or_path, **tokenizer_kwargs)
+            if model_architecture == "LLaMAForCausalLM" or model_architecture == "LllamaForCausalLM":
+                tokenizer = transformers.LlamaTokenizer.from_pretrained(model_args.model_name_or_path, **tokenizer_kwargs)
+            else:
+                tokenizer = AutoTokenizer.from_pretrained(
+                    model_args.model_name_or_path, **tokenizer_kwargs)
 
     else:
         raise ValueError(
@@ -349,9 +352,10 @@ def main():
         )
 
     #add pad tokens and resize max length of the tokenizer because the model is trained using GPT2 tokenizer but has a longer max length
-    tokenizer.pad_token = tokenizer.eos_token
-    tokenizer.pad_token_id = tokenizer.eos_token_id
-    logger.info("Setting `pad_token` to `eos_token`: %s", tokenizer.eos_token)
+    if tokenizer.pad_token is None and tokenizer.pad_token_id is None:
+        tokenizer.pad_token = tokenizer.eos_token
+        tokenizer.pad_token_id = tokenizer.eos_token_id
+        logger.info("Setting `pad_token` to `eos_token`: %s", tokenizer.eos_token)
     if data_args.block_size is None:
         logger.info("Setting `block_size` 2048 since it was not set")
         tokenizer.model_max_length = 2048
