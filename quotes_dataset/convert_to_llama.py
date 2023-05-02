@@ -4,12 +4,26 @@ import os
 train_df = pd.read_csv('./GPT/train.csv')
 valid_df = pd.read_csv('./GPT/validation.csv')
 
+old_eos = "<|endoftext|>"
+
+new_bos = "<s>"
+new_eos = "</s>"
+
 #loop through each row under text column and replace <|endoftext|> with </s>
 for i in range(len(train_df)):
-    train_df['text'][i] = train_df['text'][i].replace('<|endoftext|>', '')
+    old_text = train_df['text'][i]
+    new_text = old_text.replace(old_eos,"")
+    new_text = new_bos + new_text + new_eos
+    # print(new_text)
+    train_df['text'][i] = new_text
+
+
 
 for i in range(len(valid_df)):
-    valid_df['text'][i] = valid_df['text'][i].replace('<|endoftext|>', '')
+    old_text = train_df['text'][i]
+    new_text = old_text.replace(old_eos,"")
+    new_text = new_bos + new_text + new_eos
+    valid_df['text'][i] = new_text
 
 #save the new csv files
 output_path = './llama/'
