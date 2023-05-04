@@ -324,8 +324,6 @@ def main():
     config.gradient_checkpointing = True
     config.use_cache = False
 
-    model_architecture = config.architectures[0]
-
     tokenizer_kwargs = {
         "cache_dir": model_args.cache_dir,
         "use_fast": model_args.use_fast_tokenizer,
@@ -339,11 +337,8 @@ def main():
         if model_args.model_name_or_path == "EleutherAI/gpt-neox-20b":
             tokenizer = GPTNeoXTokenizerFast.from_pretrained("EleutherAI/gpt-neox-20b")        
         else:
-            if model_architecture == "LLaMAForCausalLM" or model_architecture == "LllamaForCausalLM":
-                tokenizer = transformers.LlamaTokenizer.from_pretrained(model_args.model_name_or_path, **tokenizer_kwargs)
-            else:
-                tokenizer = AutoTokenizer.from_pretrained(
-                    model_args.model_name_or_path, **tokenizer_kwargs)
+            tokenizer = AutoTokenizer.from_pretrained(
+                model_args.model_name_or_path, **tokenizer_kwargs)
 
     else:
         raise ValueError(
