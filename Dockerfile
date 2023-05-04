@@ -39,6 +39,8 @@ RUN pip install git+https://github.com/microsoft/DeepSpeed-MII.git
 
 RUN pip install wandb
 
+RUN pip install protobuf==3.20.*
+
 WORKDIR /workspace
 
 CMD ["bash"]
