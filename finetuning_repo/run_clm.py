@@ -373,7 +373,7 @@ def main():
         logger.info("Training new model from scratch")
         model = AutoModelForCausalLM.from_config(config)
     # if model_args.model_name_or_path != "EleutherAI/gpt-j-6B":
-    if data_args.extra_tokens_file is not None and model_args.model_name_or_path == "EleutherAI/gpt-j-6B":
+    if data_args.extra_tokens_file is not None:
         tokens_to_add = get_tokens(os.path.realpath(data_args.extra_tokens_file))
         tokenizer.add_tokens(tokens_to_add)
         logger.info("Added %d extra tokens to the tokenizer", len(tokens_to_add))
