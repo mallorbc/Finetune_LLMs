@@ -29,6 +29,10 @@ RUN pip install datasets \
 && pip install transformers \ 
 && pip install accelerate
 
+# RUN pip install git+https://github.com/huggingface/transformers.git
+# RUN pip install git+https://github.com/huggingface/accelerate.git
+RUN pip install git+https://github.com/huggingface/peft.git
+
 RUN pip install sentencepiece
 
 RUN pip install einops
