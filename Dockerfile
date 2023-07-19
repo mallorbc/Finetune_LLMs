@@ -31,9 +31,11 @@ RUN pip install datasets \
 
 RUN pip install sentencepiece
 
+RUN pip install einops
+
 RUN pip install triton==1.0.0
 
-RUN pip install git+https://github.com/microsoft/DeepSpeed.git@v0.9.1
+RUN pip install git+https://github.com/microsoft/DeepSpeed.git@v0.9.3
 
 RUN pip install git+https://github.com/microsoft/DeepSpeed-MII.git
 
