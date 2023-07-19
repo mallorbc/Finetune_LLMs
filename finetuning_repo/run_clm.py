@@ -185,6 +185,11 @@ class DataTrainingArguments:
         metadata={"help": "Whether to group texts together when tokenizing"},
     )
 
+    trust_remote_code: bool = field(
+        default=False,
+        metadata={"help": "Whether to trust the remote code"},
+    )
+
     def __post_init__(self):
         if self.dataset_name is None and self.train_file is None and self.validation_file is None:
             raise ValueError(
@@ -307,6 +312,7 @@ def main():
         "cache_dir": model_args.cache_dir,
         "revision": model_args.model_revision,
         "use_auth_token": True if model_args.use_auth_token else None,
+        "trust_remote_code": True if data_args.trust_remote_code else None,
     }
     if model_args.config_name:
         config = AutoConfig.from_pretrained(
@@ -324,11 +330,23 @@ def main():
     config.gradient_checkpointing = True
     config.use_cache = False
 
+    model_arch = config.architectures[0]
+    if model_arch == "MPTForCausalLM":
+        if data_args.block_size is not None:
+            logger.info(f"MPT being used with context window of {data_args.block_size}")
+            config.max_seq_len = data_args.block_size
+
+
+
+
+
     tokenizer_kwargs = {
         "cache_dir": model_args.cache_dir,
         "use_fast": model_args.use_fast_tokenizer,
         "revision": model_args.model_revision,
         "use_auth_token": True if model_args.use_auth_token else None,
+        "trust_remote_code": True if data_args.trust_remote_code else None,
+
     }
     if model_args.tokenizer_name:
         tokenizer = AutoTokenizer.from_pretrained(
@@ -368,6 +386,8 @@ def main():
                 cache_dir=model_args.cache_dir,
                 revision=model_args.model_revision,
                 use_auth_token=True if model_args.use_auth_token else None,
+                trust_remote_code=True if data_args.trust_remote_code else None,
+
             )
     else:
         logger.info("Training new model from scratch")
