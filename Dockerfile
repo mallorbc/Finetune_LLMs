@@ -25,19 +25,17 @@ RUN pip install ninja
 
 RUN pip install torch torchvision torchaudio
 
-RUN pip install datasets \ 
-&& pip install transformers \ 
-&& pip install accelerate
+RUN pip install datasets 
 
-# RUN pip install git+https://github.com/huggingface/transformers.git
-# RUN pip install git+https://github.com/huggingface/accelerate.git
+RUN pip install git+https://github.com/huggingface/transformers.git
+RUN pip install git+https://github.com/huggingface/accelerate.git
 RUN pip install git+https://github.com/huggingface/peft.git
 
 RUN pip install sentencepiece
 
 RUN pip install einops
 
-RUN pip install triton==1.0.0
+RUN pip install triton
 
 RUN pip install git+https://github.com/microsoft/DeepSpeed.git@v0.9.3
 
@@ -46,6 +44,12 @@ RUN pip install git+https://github.com/microsoft/DeepSpeed-MII.git
 RUN pip install wandb
 
 RUN pip install protobuf==3.20.*
+
+RUN pip install bitsandbytes
+
+RUN pip install scipy
+
+RUN pip install --upgrade torch
 
 WORKDIR /workspace
 
