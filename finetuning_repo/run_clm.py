@@ -28,7 +28,9 @@ from dataclasses import dataclass, field
 from typing import Optional
 from pathlib import Path
 
-from datasets import load_dataset, Dataset
+from datasets import load_dataset
+from peft import get_peft_model, LoraConfig, TaskType
+
 
 import transformers
 from transformers import (
@@ -36,20 +38,19 @@ from transformers import (
     MODEL_FOR_CAUSAL_LM_MAPPING,
     AutoConfig,
     AutoModelForCausalLM,
-    GPTNeoForCausalLM,
     AutoTokenizer,
     HfArgumentParser,
     Trainer,
     TrainingArguments,
     default_data_collator,
     set_seed,
-    GPT2Tokenizer
+    BitsAndBytesConfig
 )
-from transformers import GPTNeoForSequenceClassification
 from transformers.trainer_utils import get_last_checkpoint, is_main_process
 from transformers.utils import check_min_version
-from transformers import GPTNeoXForCausalLM, GPTNeoXTokenizerFast
 import os
+import torch
+
 
 if "WANDB_PROJECT" not in os.environ:
     os.environ["WANDB_PROJECT"] = "GPT_finetuning"
@@ -117,6 +118,17 @@ class ModelArguments:
             "with private models)."
         },
     )
+
+    use_lora: bool = field(
+        default=False,
+        metadata={"help": "Whether to use lora"},
+    )
+
+    lora_bits: Optional[int] = field(
+        default=4,
+        metadata={"help": "The number of bits to use for lora.  Can use 16 8 or 4"},
+    )
+
 
 
 @dataclass
@@ -326,8 +338,7 @@ def main():
             "You are instantiating a new config instance from scratch.")
 
     # Things that were changed from the huggingface file
-
-    config.gradient_checkpointing = True
+    config.gradient_checkpointing = not model_args.use_lora
     config.use_cache = False
 
     model_arch = config.architectures[0]
@@ -352,11 +363,8 @@ def main():
         tokenizer = AutoTokenizer.from_pretrained(
             model_args.tokenizer_name, **tokenizer_kwargs)
     elif model_args.model_name_or_path:
-        if model_args.model_name_or_path == "EleutherAI/gpt-neox-20b":
-            tokenizer = GPTNeoXTokenizerFast.from_pretrained("EleutherAI/gpt-neox-20b")        
-        else:
-            tokenizer = AutoTokenizer.from_pretrained(
-                model_args.model_name_or_path, **tokenizer_kwargs)
+        tokenizer = AutoTokenizer.from_pretrained(
+            model_args.model_name_or_path, **tokenizer_kwargs)
 
     else:
         raise ValueError(
@@ -376,6 +384,29 @@ def main():
         logger.info("Setting `block_size` to %d", data_args.block_size)
         tokenizer.model_max_length = data_args.block_size
 
+    if model_args.use_lora and model_args.lora_bits == 4:
+        logger.info("Using QLora")
+
+        bnb_config = BitsAndBytesConfig(
+            load_in_4bit=True,
+            bnb_4bit_quant_type="nf4",
+            bnb_4bit_compute_dtype=torch.bfloat16,
+            bnb_4bit_use_double_quant=True,
+        )
+    
+    elif model_args.use_lora and model_args.lora_bits == 8:
+        logger.info("Using 8bit Lora")
+
+        bnb_config = BitsAndBytesConfig(
+            load_in_8bit=True
+        )
+    else:
+        if model_args.use_lora:
+            logger.info("Using 16bit Lora")
+        bnb_config = None
+
+
+
 
     if model_args.model_name_or_path:
 
@@ -387,18 +418,26 @@ def main():
                 revision=model_args.model_revision,
                 use_auth_token=True if model_args.use_auth_token else None,
                 trust_remote_code=True if data_args.trust_remote_code else None,
+                quantization_config=bnb_config,
+                torch_dtype=torch.bfloat16 if torch.cuda.is_bf16_supported() else torch.float16,
 
             )
+        if model_args.use_lora:
+            peft_config = LoraConfig(
+                task_type=TaskType.CAUSAL_LM, inference_mode=False, r=64, lora_alpha=16, lora_dropout=0.1
+            )
+            model = get_peft_model(model, peft_config)
+            model.print_trainable_parameters()
+
+
     else:
         logger.info("Training new model from scratch")
         model = AutoModelForCausalLM.from_config(config)
-    # if model_args.model_name_or_path != "EleutherAI/gpt-j-6B":
+        
     if data_args.extra_tokens_file is not None:
         tokens_to_add = get_tokens(os.path.realpath(data_args.extra_tokens_file))
         tokenizer.add_tokens(tokens_to_add)
         logger.info("Added %d extra tokens to the tokenizer", len(tokens_to_add))
-
-    model.resize_token_embeddings(len(tokenizer))
 
 
     # Preprocessing the datasets.
