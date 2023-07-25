@@ -1,5 +1,16 @@
 # New Guide Using Docker
 
+The options for finetuning are either using nothing(only good for small models), DeepSpeed(good for full finetuning of large models), or the use of Lora or Qlora.  The way you run the code will change slightly based on what option you want to use, but the options are mostly the same.
+
+Full fine-tuning is typically slightly better than using Lora or Qlora, but the requirements of the hardware are much smaller when using something like QLora.  
+
+In terms of hardware requirements, the order is something like the following:
+
+1. Regular finetuning(full finetuning)
+2. Finetuning with DeepSpeed(full finetuning)
+3. Lora(we first freeze the weights of the LLM and then train a smaller model that learns the weight gradients that are later applied to the model)
+4. QLora(we train quantize then freeze the weights of the LLM and then train a smaller model that learns the weight gradients that are later applied to the model)
+
 ## DeepSpeed
 
 DeepSpeed is an easy-to-use deep learning optimization software suite that enables unprecedented scale and speed for Deep Learning Training and Inference.  Learn more about DeepSpeed [here](https://github.com/microsoft/DeepSpeed) and [here](https://www.deepspeed.ai/) and [here](https://huggingface.co/docs/transformers/main_classes/deepspeed)
@@ -10,7 +21,7 @@ Each stage of DeepSpeed Zero requires less GPU resources at the cost of speed.  
 
 ## Wandb
 
-Wandb is a tool used to track and visualize all the pieces of your machine learning pipeline, from datasets to production models.  See more [here](https://github.com/wandb/wandb) and [here](https://wandb.ai/)
+Wandb is a tool used to track and visualize all the pieces of your machine-learning pipeline, from datasets to production models.  See more [here](https://github.com/wandb/wandb) and [here](https://wandb.ai/)
 
 This is a tool that can give you a nice web interface to track the loss values while training.  Alternatively, you could use a log file which I will go over under running.
 
