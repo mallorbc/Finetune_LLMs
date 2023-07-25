@@ -1,8 +1,8 @@
-# Finetune_LLMs
+# Finetune LLMs
 
 ## Overview
 
-This repo contains code to fine-tune Large Language Models(LLMs) with a famous quotes dataset. Originally, the repo downloaded and converted the model weights for GPTJ when it was not yet added to huggingface transformer package.  That code can still be seen under the branch ```original_youtube```
+This repo contains code to fine-tune Large Language Models(LLMs) with a famous quotes dataset. Originally, the repo downloaded and converted the model weights for GPTJ when it was not yet added to Huggingface transformer package.  That code can still be seen under the branch ```original_youtube```
 
 ```/quotes_dataset``` contains the dataset properly formatted for fine-tuning. See repo for making this dataset [here](https://github.com/mallorbc/GPT_Neo_quotes_dataset)
 
@@ -32,7 +32,7 @@ The updated walkthrough uses Nvidia-docker to take the headache out of much of t
 
 #### Cuda Drivers Example
 
-If you have a 64-bit Linux system and need drivers for an A100, you can run a command like this to get setup.
+If you have a 64-bit Linux system and need drivers for an A100, you can run a command like this to get set up.
 
 ```wget https://us.download.nvidia.com/tesla/515.86.01/NVIDIA-Linux-x86_64-515.86.01.run```
 
