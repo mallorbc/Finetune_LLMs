@@ -2,11 +2,19 @@
 
 ## Overview
 
-This repo contains code to fine-tune Large Language Models(LLMs) with a famous quotes dataset. Originally, the repo downloaded and converted the model weights for GPTJ when it was not yet added to Huggingface transformer package.  That code can still be seen under the branch ```original_youtube```
+This repo contains code to fine-tune Large Language Models(LLMs) with a famous quotes dataset. 
+
+The supported methods of Finetuning are DeepSpeed, Lora, or QLora.
+
+Originally, the repo downloaded and converted the model weights for GPTJ when it was not yet added to Huggingface transformer package.  That code can still be seen under the branch ```original_youtube```.
 
 ```/quotes_dataset``` contains the dataset properly formatted for fine-tuning. See repo for making this dataset [here](https://github.com/mallorbc/GPT_Neo_quotes_dataset)
 
-```/finetuning_repo``` contains code orginally from the repo [here](https://github.com/Xirider/finetune-gpt2xl) that I have modified to work with GPT-J-6B
+```/finetuning_repo``` contains code originally from the repo [here](https://github.com/Xirider/finetune-gpt2xl) that I have modified to work with more models and with more methods.
+
+## Professional Assistance
+
+If are in need of paid professional help, that is available through this [email](mailto:blakecmallory@gmail.com) 
 
 ## Old Video Walkthroughs(Don't Use Under Normal Conditions)
 
@@ -19,7 +27,7 @@ A more updated video for using the Huggingface model can be seen [here](https://
 3. Then you want to copy the data from ```train.csv``` and ```validation.csv``` from ```/quotes_dataset``` to the ```/finetuning_repo``` folder
 4. Run the finetuning code with appropriate flags to fine-tune the model. See ```example_run.txt``` inside the ```finetuning_repo```
 
-## Updated Docker Walkthrough
+## Updated Docker Walkthrough(Use This Under Normal Conditions)
 
 The updated walkthrough uses Nvidia-docker to take the headache out of much of the process.
 
