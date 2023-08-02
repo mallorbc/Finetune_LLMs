@@ -19,6 +19,24 @@ Each stage of DeepSpeed Zero requires less GPU resources at the cost of speed.  
 
 ```ds_config_stage1.json```, ```ds_config_stage2.json``` and ```ds_config_stage3.json``` are all configs that I have used depending on what system I am on and what model I am trying to train. 
 
+## QLora and Lora
+
+Lora is a method where rather than updating all the weights of the model, we train a separate model that learns the rank-decomposition of some of the modules in a model(typically attention or linear layers) and updates those model weights that represent this rank decomposition of the newly learned objective.  The base model does not change at all.
+
+We can then apply the reconstructed weight updates to the base model weights to have the final model.
+
+The idea is that we have two matrixes of 100x100 and 100x100, if we multiply them we get a 100x100 matrix.  Research has shown that LLMs have low rank.  Having a low rank means that the matrix can be represented by a smaller matrix without losing information since the larger matrix has linearly dependent matrixes. 
+
+This means that we can represent two matrixes as two other matrixes of a lower rank.  Let's say 10.  That makes two matrics of 10x100 and 100X10 making a 10x10 matrix after the matrix multiplication, which requires fewer resources to train and since LLMs have low rank, should still be able to be reconstructed.
+
+Lora works with quantization as well.  We can load the base model with either 16 bits precisions, bitsandbytes int8, or bitsandbytes int4. Int4 Lora is also known as QLora.
+
+I am not aware if there are any benefits to doing higher vs lower bit precision Lora.  
+
+It's also likely worthwhile looking at the QLora repo and reading the paper to see how to best use this tech. QLora is less than 3 months old at this time of writing.
+
+Using batch 1 for int4 has some speedup, so perhaps it is faster?  See [here](https://github.com/TimDettmers/bitsandbytes/releases)
+
 ## Wandb
 
 Wandb is a tool used to track and visualize all the pieces of your machine-learning pipeline, from datasets to production models.  See more [here](https://github.com/wandb/wandb) and [here](https://wandb.ai/)
@@ -31,7 +49,7 @@ To do so run this:
 
 ```export WANDB_DISABLED=true```
 
-To use, be sure to login using ```wandb login```
+To use, be sure to log in using ```wandb login```
 
 After logging in, you will be given a link that gives you a token, copy and paste that token into the terminal.
 
@@ -43,48 +61,57 @@ Example:
 
 ## Preparing A Dataset
 
-Preparing a dataset is a very important step to finetuning.  There are several ways to go about preparing the dataset.  Those include corpus model or individual entries mode.  
+Preparing a dataset is a very important step to finetuning.  There are several ways to go about preparing the dataset.  Those include the corpus model or individual entries mode.  
 
-Corpus mode is easier, you just have many pieces of text and arange the dataset into a csv file under a column called ```text```.  This would be good for things like code, books, etc.  You could also use this mode for allowing few-shot learning, where other entries may provide guidance to solve other problems.  Something to note, is that when running in corpus mode, the program will split entries in half in order to fill the ```--block_size``` window.  If that is acceptable, consider this mode.
+Corpus mode is easier, you just have many pieces of text and arrange the dataset into a csv file under a column called ```text```.  This would be good for things like code, books, etc.  You could also use this mode for allowing few-shot learning, where other entries may provide guidance to solve other problems.  Something to note, is that when running in corpus mode, the program will split entries in half in order to fill the ```--block_size``` window.  If that is acceptable, consider this mode.
 
-Individual entries mode means you include ```<|endoftext|>``` tokens to seperate entries.  This means that entries contain one example with padding, which is useful for zero shot problems or problems that can not be split in half in still make sense.
+Individual entries mode means you include ```<|endoftext|>``` tokens to separate entries.  This means that entries contain one example with padding, which is useful for zero-shot problems or problems that can not be split in half in still make sense.
 
 You can find more information on creating a dataset from this [video](https://www.youtube.com/watch?v=07ppAKvOhqk&ab_channel=Brillibits)
 
-## Finetuning Model
+## Finetuning Arguments
 
-Training and finetuning a model is equal parts art and science.  If you want the best model possible, you are going to need to do a hyperparamter sweep, meaning run with many different learning rates, weight decay, etc.
+Training and finetuning a model is equal parts art and science.  If you want the best model possible, you are going to need to do a hyperparameter sweep, meaning run with many different learning rates, weight decay, etc.
 
-The values and flags in the ```example_run.txt``` are a good starting point.  Training arguments that are supported include those use in the ```transformers``` library.  See [here](https://huggingface.co/docs/transformers/v4.25.1/en/main_classes/trainer#transformers.TrainingArguments) for all possible flags.
+The values and flags in the ```example_run.txt``` are a good starting point.  Training arguments that are supported include those used in the ```transformers``` library.  See [here](https://huggingface.co/docs/transformers/v4.25.1/en/main_classes/trainer#transformers.TrainingArguments) for all possible flags.
 
 This repo uses GPUs, but it may be worthwhile to look at what the orginal TPU [project](https://github.com/kingoflolz/mesh-transformer-jax/blob/master/howto_finetune.md) suggests for finetuning.
 
 Some extra important settings are the ```learning_rate```, ```block_size```, ```gradient_accumulation_steps```, ```per_device_train_batch_size```, ```num_gpus```, ```extra_tokens_file``` and ```group_texts```.  
 
-If you tasks never needs more than say, 512 tokens, by decreasing the ```block_size``` arg, you can reduce the memory consumption and thus have a large batch size.  
+If your tasks never need more than say, 512 tokens, by decreasing the ```block_size``` arg, you can reduce the memory consumption and thus have a large batch size.  
 
 The ```learning_rate``` at 5e-6 is good, but you could start higher and decay by 10x.  
 
-I try to have ```gradient_accumulation_steps```, ```per_device_train_batch_size``` and ```num_gpus``` multipy to 32.  Larger product from these flags can allow a larger learning rate, but typically larger batch sizes generalize worse, see [here](https://arxiv.org/pdf/1609.04836.pdf).  This will will need to be experimentally determined.  Going smaller than a 32 product may be a good idea.
+I try to have ```gradient_accumulation_steps```, ```per_device_train_batch_size``` and ```num_gpus``` multipy to 32.  Larger product from these flags can allow a larger learning rate, but typically larger batch sizes generalize worse, see [here](https://arxiv.org/pdf/1609.04836.pdf).  This will need to be experimentally determined.  Going smaller than a 32 product may be a good idea.
 
-If you want to add tokens to the tokenizer, use the ```--extra_tokens_file``` flag.  Have the flag point to a text file that has the extra tokens you want to add.  Each token should be on its own line.  Currenly this is only support for GPTJ, as is has extra room in its output dimensions to make this work.
+If you want to add tokens to the tokenizer, use the ```--extra_tokens_file``` flag.  Have the flag point to a text file that has the extra tokens you want to add.  Each token should be on its own line.  Currently, this is only support for GPTJ, as it has extra room in its output dimensions to make this work.
 
-If you want to run in individual entries model, you do not need to run finetuning with any special flags and the indivual entries will be padded.  If you want to run in corpus mode, you need to run with the ```--group_texts``` flag, which will combine entries as needed.
+If you want to run in an individual entries model, you do not need to run finetuning with any special flags and the individual entries will be padded.  If you want to run in corpus mode, you need to run with the ```--group_texts``` flag, which will combine entries as needed.
 
 Using ```weight_decay``` may be a good idea as well to help the model generalize.  A value of 0.1 was used during pretraining.
 
-### Example
+### Full Finetuning Example
 
 ```
 deepspeed --num_gpus=1 run_clm.py --deepspeed ds_config_stage3.json --model_name_or_path EleutherAI/gpt-j-6B --train_file train.csv --validation_file validation.csv --do_train --do_eval --fp16 --overwrite_cache --evaluation_strategy=steps --output_dir finetuned --num_train_epochs 12  --eval_steps 20 --gradient_accumulation_steps 32 --per_device_train_batch_size 1 --use_fast_tokenizer False --learning_rate 5e-06 --warmup_steps 10 --save_total_limit 1 --save_steps 20 --save_strategy steps --tokenizer_name gpt2 --load_best_model_at_end=True --block_size=2048 --report_to=wandb
 ```
 
-To change what model you run, simply change ```--model_name_or_path```.  Models that been tested include GPT Neo 1.3B 2.7B and GPTJ
+To change what model you run, simply change ```--model_name_or_path```.  Most causal models on HuggingFace are supported.  GPT2, GPT Neo, GPTJ, OPT, MPT, LLama, Falcon, etc
 
+### QLora Example
+
+The arguments for QLora are the same except for a few things.  We want to raise the learning rate to something like 1e-4, not use deepspeed, and use two new flags.
+
+Those flags are ```--use_lora``` and ```--lora_bits```
+
+```
+python run_clm.py --use_lora True --lora_bits 4 --model_name_or_path EleutherAI/gpt-j-6B --train_file train.csv --validation_file validation.csv --do_train --do_eval --fp16 --overwrite_cache --evaluation_strategy=steps --output_dir finetuned --num_train_epochs 12  --eval_steps 20 --gradient_accumulation_steps 32 --per_device_train_batch_size 1 --use_fast_tokenizer False --learning_rate 1e-04 --warmup_steps 10 --save_total_limit 1 --save_steps 20 --save_strategy steps --tokenizer_name gpt2 --load_best_model_at_end=True --block_size=2048 --report_to=wandb
+```
 
 # Original Repo Guide: Finetune GPT2-XL (1.5 Billion Parameters) and GPT-NEO (2.7 Billion Parameters) on a single GPU with Huggingface Transformers using DeepSpeed
 
-This was the README for which I modified the code from. Some useful insight may be here.
+This was the README from which I modified the code. Some useful insight may be here.
 
 - Finetuning large language models like GPT2-xl is often difficult, as these models are too big to fit on a single GPU.
 - This guide explains how to finetune GPT2-xl and GPT-NEO (2.7B Parameters) with just one command of the Huggingface Transformers library on a single GPU.
