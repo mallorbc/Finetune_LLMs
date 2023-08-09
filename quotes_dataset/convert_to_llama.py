@@ -19,7 +19,7 @@ for i in range(len(train_df)):
 
 
 for i in range(len(valid_df)):
-    old_text = train_df['text'][i]
+    old_text = valid_df['text'][i]
     new_text = old_text.replace(old_eos,"")
     new_text = new_bos + new_text + new_eos
     valid_df['text'][i] = new_text
