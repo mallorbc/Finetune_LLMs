@@ -56,6 +56,8 @@ if "WANDB_PROJECT" not in os.environ:
     os.environ["WANDB_PROJECT"] = "GPT_finetuning"
 os.environ["WANDB_DISABLE_CODE"] = "true"
 
+access_token = os.getenv("HF_TOKEN", "")
+
 def get_tokens(tokens_file):
     with open(tokens_file,"r") as f:
             tokens = f.readlines()
@@ -127,6 +129,11 @@ class ModelArguments:
     lora_bits: Optional[int] = field(
         default=4,
         metadata={"help": "The number of bits to use for lora.  Can use 16 8 or 4"},
+    )
+
+    split_model: bool = field(
+         default=False,
+            metadata={"help": "Whether to split the model into multiple parts"},
     )
 
 
@@ -325,6 +332,7 @@ def main():
         "revision": model_args.model_revision,
         "use_auth_token": True if model_args.use_auth_token else None,
         "trust_remote_code": True if data_args.trust_remote_code else None,
+        "token":access_token
     }
     if model_args.config_name:
         config = AutoConfig.from_pretrained(
@@ -357,6 +365,7 @@ def main():
         "revision": model_args.model_revision,
         "use_auth_token": True if model_args.use_auth_token else None,
         "trust_remote_code": True if data_args.trust_remote_code else None,
+        "token":access_token
 
     }
     if model_args.tokenizer_name:
@@ -410,6 +419,13 @@ def main():
 
     if model_args.model_name_or_path:
 
+        if model_args.split_model:
+            logger.info("Splitting model onto multiple devices")
+            kwargs = {}
+            kwargs["device_map"] = "auto"
+        else:
+            kwargs = {}
+
         model = AutoModelForCausalLM.from_pretrained(
                 model_args.model_name_or_path,
                 from_tf=bool(".ckpt" in model_args.model_name_or_path),
@@ -420,7 +436,8 @@ def main():
                 trust_remote_code=True if data_args.trust_remote_code else None,
                 quantization_config=bnb_config,
                 torch_dtype=torch.bfloat16 if torch.cuda.is_bf16_supported() else torch.float16,
-
+                token=access_token,
+                **kwargs
             )
         if model_args.use_lora:
             peft_config = LoraConfig(
