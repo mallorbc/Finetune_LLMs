@@ -5,13 +5,17 @@ import numpy as np
 from tqdm import tqdm
 import os
 
+
+
 parser = argparse.ArgumentParser()
 parser.add_argument("-m","--model_name", type=str, default="EleutherAI/gpt-j-6B")
 parser.add_argument("-d","--dataset", type=str, default="./llama/")
 args = parser.parse_args()
 
+access_token = os.getenv("HF_TOKEN", "")
 
-tokenizer = AutoTokenizer.from_pretrained(args.model_name)
+
+tokenizer = AutoTokenizer.from_pretrained(args.model_name,token=access_token)
 dataset_dir = os.path.realpath(args.dataset)
 
 train_file = os.path.join(dataset_dir, "train.csv")
