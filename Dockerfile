@@ -51,6 +51,8 @@ RUN pip install scipy
 
 RUN pip install --upgrade torch
 
+RUN pip install trl
+
 WORKDIR /workspace
 
 CMD ["bash"]
