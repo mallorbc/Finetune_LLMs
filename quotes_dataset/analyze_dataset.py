@@ -15,7 +15,7 @@ args = parser.parse_args()
 access_token = os.getenv("HF_TOKEN", "")
 
 
-tokenizer = AutoTokenizer.from_pretrained(args.model_name,token=access_token)
+tokenizer = AutoTokenizer.from_pretrained(args.model_name,use_auth_token=True)
 dataset_dir = os.path.realpath(args.dataset)
 
 train_file = os.path.join(dataset_dir, "train.csv")
