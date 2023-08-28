@@ -7,6 +7,8 @@ import logging
 import os
 from peft import LoraConfig, TaskType,get_peft_model
 import pandas as pd
+from accelerate import Accelerator
+
 
 
 
@@ -41,6 +43,10 @@ if __name__ == "__main__":
     parser.add_argument("-tf","--train_file", type=str, required=True)
     parser.add_argument("-vf","--validation_file", type=str, required=True)
     parser.add_argument("-s","--save_limit", type=int, default=1)
+    
+    parser.add_argument("--use_int4", action="store_true", default=False)
+    parser.add_argument("--use_int8", action="store_true", default=False)
+    parser.add_argument("--disable_lora", action="store_true", default=False)
     args = parser.parse_args()
 
 
@@ -56,7 +62,7 @@ if __name__ == "__main__":
         logger.info("Splitting the model across all available devices")
         kwargs = {"device_map":"auto"}
     else:
-        kwargs = {}
+        kwargs = {"device_map":None}
 
     tokenizer = AutoTokenizer.from_pretrained(args.model_name, token=access_token,trust_remote_code=args.trust_remote_code,add_eos_token=True,use_fast=True)
     #THIS IS A HACK TO GET THE PAD TOKEN ID NOT TO BE EOS
@@ -66,12 +72,23 @@ if __name__ == "__main__":
     block_size = args.block_size
     logger.info("Using a block size of %d", block_size)
 
-    bnb_config = BitsAndBytesConfig(
-        load_in_4bit=True,
-        bnb_4bit_quant_type="nf4",
-        bnb_4bit_compute_dtype=torch.bfloat16 if torch.cuda.is_bf16_supported() else torch.float16,
-        bnb_4bit_use_double_quant=True,
-    )
+    if args.use_int4:
+        logger.info("Using int4 quantization")
+        bnb_config = BitsAndBytesConfig(
+            load_in_4bit=True,
+            bnb_4bit_quant_type="nf4",
+            bnb_4bit_compute_dtype=torch.bfloat16 if torch.cuda.is_bf16_supported() else torch.float16,
+            bnb_4bit_use_double_quant=True,
+        )
+    elif args.use_int8:
+        logger.info("Using int8 quantization")
+        bnb_config = BitsAndBytesConfig(
+            load_in_8bit=True,
+        )
+    else:
+        logger.info("Using no quantization")
+        bnb_config = None
+
 
     peft_config = LoraConfig(
         task_type=TaskType.CAUSAL_LM, inference_mode=False, r=args.lora_rank, lora_alpha=args.lora_alpha, lora_dropout=args.lora_dropout
@@ -87,7 +104,11 @@ if __name__ == "__main__":
     torch_dtype = torch.bfloat16 if torch.cuda.is_bf16_supported() else torch.float16
     model = AutoModelForCausalLM.from_pretrained(args.model_name, token=access_token,quantization_config=bnb_config,trust_remote_code=args.trust_remote_code,torch_dtype=torch_dtype,config=config, **kwargs)
 
-    model = get_peft_model(model, peft_config)
+    if not args.disable_lora:
+        logger.info("Using LORA")
+        model = get_peft_model(model, peft_config)
+    else:
+        logger.info("Using Full Finetuning")
 
 
     training_args = TrainingArguments(
@@ -114,6 +135,8 @@ if __name__ == "__main__":
         report_to="wandb",
         load_best_model_at_end=True,
         save_total_limit=args.save_limit,
+        bf16=True if torch.cuda.is_bf16_supported() else False,
+        fp16=False if torch.cuda.is_bf16_supported() else True,
     )
 
 
