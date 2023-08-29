@@ -73,6 +73,8 @@ if __name__ == "__main__":
     #good one for LLama is 18610
     if args.pad_token_id is not None:
         tokenizer.pad_token_id = args.pad_token_id
+    if tokenizer.pad_token_id is None:
+        tokenizer.pad_token_id = tokenizer.eos_token_id
 
 
     block_size = args.block_size
