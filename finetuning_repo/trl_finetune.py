@@ -47,6 +47,8 @@ if __name__ == "__main__":
     parser.add_argument("--use_int4", action="store_true", default=False)
     parser.add_argument("--use_int8", action="store_true", default=False)
     parser.add_argument("--disable_lora", action="store_true", default=False)
+    
+    parser.add_argument("--eos_token_id", default=None, type=int, help="The end of sequence token.")
     args = parser.parse_args()
 
 
@@ -66,7 +68,9 @@ if __name__ == "__main__":
 
     tokenizer = AutoTokenizer.from_pretrained(args.model_name, token=access_token,trust_remote_code=args.trust_remote_code,add_eos_token=True,use_fast=True)
     #THIS IS A HACK TO GET THE PAD TOKEN ID NOT TO BE EOS
-    tokenizer.pad_token_id = 18610
+    #good one for LLama is 18610
+    if args.eos_token_id is not None:
+        tokenizer.pad_token_id = args.eos_token_id
 
 
     block_size = args.block_size
@@ -80,14 +84,17 @@ if __name__ == "__main__":
             bnb_4bit_compute_dtype=torch.bfloat16 if torch.cuda.is_bf16_supported() else torch.float16,
             bnb_4bit_use_double_quant=True,
         )
+        optimizer = "adamw_bnb_8bit"
     elif args.use_int8:
         logger.info("Using int8 quantization")
         bnb_config = BitsAndBytesConfig(
             load_in_8bit=True,
         )
+        optimizer = "adamw_bnb_8bit"
     else:
         logger.info("Using no quantization")
         bnb_config = None
+        optimizer = "adamw_torch"
 
 
     peft_config = LoraConfig(
@@ -125,7 +132,7 @@ if __name__ == "__main__":
         logging_steps=args.log_steps,
         per_device_train_batch_size=args.batch_size,
         per_device_eval_batch_size=args.batch_size*2,
-        optim="adamw_bnb_8bit",
+        optim=optimizer,
         learning_rate=args.learning_rate,
         lr_scheduler_type=args.lr_scheduler_type,
         warmup_steps=args.warmup_steps,
