@@ -48,7 +48,9 @@ if __name__ == "__main__":
     parser.add_argument("--use_int8", action="store_true", default=False)
     parser.add_argument("--disable_lora", action="store_true", default=False)
     
-    parser.add_argument("--eos_token_id", default=None, type=int, help="The end of sequence token.")
+    parser.add_argument("--pad_token_id", default=None, type=int, help="The end of sequence token.")
+    parser.add_argument("--add_eos_token", action="store_true", help="Add EOS token to tokenizer", default=False)
+    parser.add_argument("--add_bos_token",  action="store_true", help="Add BOS token to tokenizer", default=False)
     args = parser.parse_args()
 
 
@@ -66,11 +68,11 @@ if __name__ == "__main__":
     else:
         kwargs = {"device_map":None}
 
-    tokenizer = AutoTokenizer.from_pretrained(args.model_name, token=access_token,trust_remote_code=args.trust_remote_code,add_eos_token=True,use_fast=True)
+    tokenizer = AutoTokenizer.from_pretrained(args.model_name, token=access_token,trust_remote_code=args.trust_remote_code,add_eos_token=args.add_eos_token,add_bos_token=args.add_bos_token,use_fast=True)
     #THIS IS A HACK TO GET THE PAD TOKEN ID NOT TO BE EOS
     #good one for LLama is 18610
-    if args.eos_token_id is not None:
-        tokenizer.pad_token_id = args.eos_token_id
+    if args.pad_token_id is not None:
+        tokenizer.pad_token_id = args.pad_token_id
 
 
     block_size = args.block_size
