@@ -213,6 +213,19 @@ Those flags are ```--use_lora``` and ```--lora_bits```
 python run_clm.py --use_lora True --lora_bits 4 --model_name_or_path EleutherAI/gpt-j-6B --train_file train.csv --validation_file validation.csv --do_train --do_eval --fp16 --overwrite_cache --evaluation_strategy=steps --output_dir finetuned --num_train_epochs 12  --eval_steps 20 --gradient_accumulation_steps 32 --per_device_train_batch_size 1 --use_fast_tokenizer False --learning_rate 1e-04 --warmup_steps 10 --save_total_limit 1 --save_steps 20 --save_strategy steps --tokenizer_name gpt2 --load_best_model_at_end=True --block_size=2048 --report_to=wandb
 ```
 
+## Lora and Qlora merging
+
+To use your Lora models, you should merge the models.  To do so, use the ```lora_merge.py``` file.
+
+See the flags using ```-h```
+
+The flags are ```-bm```, ```-lm``` and ```-o```.  Those stand for base model, lora model, and output.
+
+Give the name or path of the base model, give the path or the lora checkpoint, and give the name of the folder to output too:
+
+Example:
+```python lora_merge.py -bm meta-llama/Llama-2-7b-hf -lm checkpoints/checkpoint-2420 -o llama2_lora_model```
+
 # Original Repo Guide: Finetune GPT2-XL (1.5 Billion Parameters) and GPT-NEO (2.7 Billion Parameters) on a single GPU with Huggingface Transformers using DeepSpeed
 
 This was the README from which I modified the code. Some useful insight may be here.
