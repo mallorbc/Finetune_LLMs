@@ -72,8 +72,11 @@ if __name__ == "__main__":
     #THIS IS A HACK TO GET THE PAD TOKEN ID NOT TO BE EOS
     #good one for LLama is 18610
     if args.pad_token_id is not None:
+        logger.info("Using pad token id %d", args.pad_token_id)
         tokenizer.pad_token_id = args.pad_token_id
+
     if tokenizer.pad_token_id is None:
+        logger.info("Pad token id is None, setting to eos token id")
         tokenizer.pad_token_id = tokenizer.eos_token_id
 
 
