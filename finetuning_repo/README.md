@@ -1,6 +1,6 @@
 # New Guide Using Docker
 
-The options for finetuning are either using nothing(only good for small models), DeepSpeed(good for full finetuning of large models), or the use of Lora or Qlora.  The way you run the code will change slightly based on what option you want to use, but the options are mostly the same.
+The options for finetuning are either using nothing(only good for small models), DeepSpeed(good for full finetuning of large models), FSDP for full finetuning of large models, or the use of Lora or Qlora.  The way you run the code will change slightly based on what option you want to use, but the options are mostly the same.
 
 Full fine-tuning is typically slightly better than using Lora or Qlora, but the requirements of the hardware are much smaller when using something like QLora.  
 
@@ -31,11 +31,9 @@ This means that we can represent two matrixes as two other matrixes of a lower r
 
 Lora works with quantization as well.  We can load the base model with either 16 bits precisions, bitsandbytes int8, or bitsandbytes int4. Int4 Lora is also known as QLora.
 
-I am not aware if there are any benefits to doing higher vs lower bit precision Lora.  
-
 It's also likely worthwhile looking at the QLora repo and reading the paper to see how to best use this tech. QLora is less than 3 months old at this time of writing.
 
-Using batch 1 for int4 has some speedup, so perhaps it is faster?  See [here](https://github.com/TimDettmers/bitsandbytes/releases)
+Lora is a bit faster than Qlora, so first try just using Lora, or using Lora with Deepspeed before using Qlora.
 
 ## Wandb
 
@@ -91,7 +89,113 @@ If you want to run in an individual entries model, you do not need to run finetu
 
 Using ```weight_decay``` may be a good idea as well to help the model generalize.  A value of 0.1 was used during pretraining.
 
-### Full Finetuning Example
+```--pad_token_id``` is used with ```trl_finetune.py``` and is needed due to the fact some models like llama2 do not have pad tokens and we need to set them to something else other than EOS.  Ideally, you would add a new token, but to prevent that, we can use a token that is never used in the dataset.  ```Make sure that the token is not used```.  Some good candidates are 18610 and 18636.
+
+```--split_model``` is used with Lora and Qlora for ```trl_finetune.py``` and is used to split a model onto multiple GPUs during training.  Use it if you have multiple GPUs.  You can then increase your batch size at the very least, or train larger models.
+
+## Finetuning
+
+There are now two programs to finetune.  That being ```run_clm.py``` and ```trl_finetune.py```.  In MOST cases, I now recommend ```trl_finetune```.  The arguments are mostly the same.  The trl option uses the ```trl``` repo and is more integrated with huggingface and by extension works well with accelerate  and allows one to easily train with many different options.
+
+If you want to use accelerate, make sure you use ```accelerate config``` before launching ```trl_finetune.py```.  You then launch the program with ```accelerate launch trl_finetune.py``` with args.
+
+### trl Full Finetuning
+
+```accelerate config```
+
+Configure Accelerate to use 1 or more GPUs, and select your data type.  If the model is really large, consider FSDP if it won't load into memory.  You may want to consider using DeepSpeed as well, especially if reduces hardware requirements.  Stage 3 will offload the parameters and optimizer.  I recommend using the ds_config files here.
+
+For smaller models, use nothing but perhaps multiple GPUs speed things up.  Then for larger models, FSDP will be faster, but cost more, and DeepSpeed will be cheaper but likely run slower, especially stage 3.
+
+Then, let's assume that with a batch size of 1 and a gradient accumulation of 16, there are 1000 steps in an epoch and we want to save and test every 0.1 epochs.  Lets also assume that the largest item in our dataset is 1024 tokens:
+
+```
+accelerate launch trl_finetune.py --block_size 1024 --eval_steps 100 --save_steps 100 -tf train.csv -vf validation.csv -m meta-llama/Llama-2-7b-hf -b 1 --log_steps 100 -lr 5e-6 -e 1 --gradient_accumulation_steps 16 --pad_token_id=18636 --disable_lora
+```
+
+### trl Lora Finetuning
+
+For Lora finetuning, it uses less resouces than full finetuning while being near the same performance. 
+
+Options for running are:
+1. Lora
+2. Lora with Deepspeed
+3. Lora with a split model
+
+
+For the first two options:
+
+```accelerate config```
+
+Configure Accelerate to use 1 or more GPUs, and select your data type.   You may want to consider using DeepSpeed as well, especially if reduces hardware requirements.  Stage 3 will offload the parameters and optimizer.  I recommend using the ds_config files here.
+
+For smaller models, use nothing but perhaps multiple GPUs speed things up.  For larger models, DeepSpeed can allow further offloading parameters.  If you have multiple GPUs, you will likely want ot go with option 3 and split the model
+
+Then, let's assume that with a batch size of 1 and a gradient accumulation of 16, there are 1000 steps in an epoch and we want to save and test every 0.1 epochs.  Lets also assume that the largest item in our dataset is 1024 tokens:
+
+```
+accelerate launch trl_finetune.py --block_size 1024 --eval_steps 100 --save_steps 100 -tf train.csv -vf validation.csv -m meta-llama/Llama-2-7b-hf -b 1 --log_steps 100 -lr 5e-6 -e 1 --gradient_accumulation_steps 16 --pad_token_id=18636
+```
+
+For option 3:
+
+We can not use accelerate here, or at least there is no reason to do so and it may cause issues.  This method loads the based model by splitting the model onto all the GPUs and then trains the Lora adapter.
+
+Then, let's assume that with a batch size of 1 and a gradient accumulation of 16, there are 1000 steps in an epoch and we want to save and test every 0.1 epochs.  Lets also assume that the largest item in our dataset is 1024 tokens:
+
+```
+python trl_finetune.py --block_size 1024 --eval_steps 100 --save_steps 100 -tf train.csv -vf validation.csv -m meta-llama/Llama-2-7b-hf -b 1 --log_steps 100 -lr 5e-6 -e 1 --gradient_accumulation_steps 16 --pad_token_id=18636 --split_model
+```
+
+### trl QLora Finetuning
+
+For Qlora finetuning, it uses even less resources than full Lora but is a bit slower.  Since, this shrinks the base model, it makes it possible to train larger models. 
+
+Options for running are:
+1. QLora int8
+2. Qlora int4
+3. Qlora int8 split
+4. Qlora int4 split
+
+int 8 may or may not be faster.  I have not tested.  If its not, use int4
+
+
+We can not use accelerate here, or at least there is no reason to do so and it may cause issues.  
+
+Option 1:
+
+Then, let's assume that with a batch size of 1 and a gradient accumulation of 16, there are 1000 steps in an epoch and we want to save and test every 0.1 epochs.  Lets also assume that the largest item in our dataset is 1024 tokens:
+
+```
+python trl_finetune.py --block_size 1024 --eval_steps 100 --save_steps 100 -tf train.csv -vf validation.csv -m meta-llama/Llama-2-7b-hf -b 1 --log_steps 100 -lr 5e-6 -e 1 --gradient_accumulation_steps 16 --pad_token_id=18636 --use_int8
+```
+
+Option 2:
+
+Then, let's assume that with a batch size of 1 and a gradient accumulation of 16, there are 1000 steps in an epoch and we want to save and test every 0.1 epochs.  Lets also assume that the largest item in our dataset is 1024 tokens:
+
+```
+python trl_finetune.py --block_size 1024 --eval_steps 100 --save_steps 100 -tf train.csv -vf validation.csv -m meta-llama/Llama-2-7b-hf -b 1 --log_steps 100 -lr 5e-6 -e 1 --gradient_accumulation_steps 16 --pad_token_id=18636 --use_int4
+```
+
+Option 3:
+
+Then, let's assume that with a batch size of 1 and a gradient accumulation of 16, there are 1000 steps in an epoch and we want to save and test every 0.1 epochs.  Lets also assume that the largest item in our dataset is 1024 tokens:
+
+```
+python trl_finetune.py --block_size 1024 --eval_steps 100 --save_steps 100 -tf train.csv -vf validation.csv -m meta-llama/Llama-2-7b-hf -b 1 --log_steps 100 -lr 5e-6 -e 1 --gradient_accumulation_steps 16 --pad_token_id=18636 --use_int8 --split_model
+```
+
+Option 4:
+
+Then, let's assume that with a batch size of 1 and a gradient accumulation of 16, there are 1000 steps in an epoch and we want to save and test every 0.1 epochs.  Lets also assume that the largest item in our dataset is 1024 tokens:
+
+```
+python trl_finetune.py --block_size 1024 --eval_steps 100 --save_steps 100 -tf train.csv -vf validation.csv -m meta-llama/Llama-2-7b-hf -b 1 --log_steps 100 -lr 5e-6 -e 1 --gradient_accumulation_steps 16 --pad_token_id=18636 --use_int4 --split_model
+```
+
+
+### run_clm.py Full Finetuning Example(NOT RECCOMENDED)
 
 ```
 deepspeed --num_gpus=1 run_clm.py --deepspeed ds_config_stage3.json --model_name_or_path EleutherAI/gpt-j-6B --train_file train.csv --validation_file validation.csv --do_train --do_eval --fp16 --overwrite_cache --evaluation_strategy=steps --output_dir finetuned --num_train_epochs 12  --eval_steps 20 --gradient_accumulation_steps 32 --per_device_train_batch_size 1 --use_fast_tokenizer False --learning_rate 5e-06 --warmup_steps 10 --save_total_limit 1 --save_steps 20 --save_strategy steps --tokenizer_name gpt2 --load_best_model_at_end=True --block_size=2048 --report_to=wandb
@@ -99,7 +203,7 @@ deepspeed --num_gpus=1 run_clm.py --deepspeed ds_config_stage3.json --model_name
 
 To change what model you run, simply change ```--model_name_or_path```.  Most causal models on HuggingFace are supported.  GPT2, GPT Neo, GPTJ, OPT, MPT, LLama, Falcon, etc
 
-### QLora Example
+### run_clm.py QLora Example(NOT RECCOMENDED)
 
 The arguments for QLora are the same except for a few things.  We want to raise the learning rate to something like 1e-4, not use deepspeed, and use two new flags.
 
