@@ -105,9 +105,9 @@ If you want to use accelerate, make sure you use ```accelerate config``` before 
 
 Configure Accelerate to use 1 or more GPUs, and select your data type.  If the model is really large, consider FSDP if it won't load into memory.  You may want to consider using DeepSpeed as well, especially if reduces hardware requirements.  Stage 3 will offload the parameters and optimizer.  I recommend using the ds_config files here.
 
-For smaller models, use nothing but perhaps multiple GPUs speed things up.  Then for larger models, FSDP will be faster, but cost more, and DeepSpeed will be cheaper but likely run slower, especially stage 3.
+For smaller models, use nothing but perhaps multiple GPUs to speed things up.  Then for larger models, FSDP will be faster, but cost more, and DeepSpeed will be cheaper but likely run slower, especially stage 3.
 
-Then, let's assume that with a batch size of 1 and a gradient accumulation of 16, there are 1000 steps in an epoch and we want to save and test every 0.1 epochs.  Lets also assume that the largest item in our dataset is 1024 tokens:
+Then, let's assume that with a batch size of 1 and a gradient accumulation of 16, there are 1000 steps in an epoch and we want to save and test every 0.1 epochs.  Let's also assume that the largest item in our dataset is 1024 tokens:
 
 ```
 accelerate launch trl_finetune.py --block_size 1024 --eval_steps 100 --save_steps 100 -tf train.csv -vf validation.csv -m meta-llama/Llama-2-7b-hf -b 1 --log_steps 100 -lr 5e-6 -e 1 --gradient_accumulation_steps 16 --pad_token_id=18636 --disable_lora
@@ -115,7 +115,7 @@ accelerate launch trl_finetune.py --block_size 1024 --eval_steps 100 --save_step
 
 ### trl Lora Finetuning
 
-For Lora finetuning, it uses less resouces than full finetuning while being near the same performance. 
+For Lora finetuning, it uses fewer resources than full finetuning while being near the same performance. 
 
 Options for running are:
 1. Lora
@@ -129,27 +129,33 @@ For the first two options:
 
 Configure Accelerate to use 1 or more GPUs, and select your data type.   You may want to consider using DeepSpeed as well, especially if reduces hardware requirements.  Stage 3 will offload the parameters and optimizer.  I recommend using the ds_config files here.
 
-For smaller models, use nothing but perhaps multiple GPUs speed things up.  For larger models, DeepSpeed can allow further offloading parameters.  If you have multiple GPUs, you will likely want ot go with option 3 and split the model
+For smaller models, use nothing but perhaps multiple GPUs to speed things up.  For larger models, DeepSpeed can allow further offloading parameters.  If you have multiple GPUs, you will likely want to go with option 3 and split the model
 
-Then, let's assume that with a batch size of 1 and a gradient accumulation of 16, there are 1000 steps in an epoch and we want to save and test every 0.1 epochs.  Lets also assume that the largest item in our dataset is 1024 tokens:
+Then, let's assume that with a batch size of 1 and a gradient accumulation of 16, there are 1000 steps in an epoch and we want to save and test every 0.1 epochs.  Let's also assume that the largest item in our dataset is 1024 tokens:
 
 ```
-accelerate launch trl_finetune.py --block_size 1024 --eval_steps 100 --save_steps 100 -tf train.csv -vf validation.csv -m meta-llama/Llama-2-7b-hf -b 1 --log_steps 100 -lr 5e-6 -e 1 --gradient_accumulation_steps 16 --pad_token_id=18636
+accelerate launch trl_finetune.py --block_size 1024 --eval_steps 100 --save_steps 100 -tf train.csv -vf validation.csv -m meta-llama/Llama-2-7b-hf -b 1 --log_steps 100 -lr 2e-4 -e 1 --gradient_accumulation_steps 16 --pad_token_id=18636
 ```
 
 For option 3:
 
 We can not use accelerate here, or at least there is no reason to do so and it may cause issues.  This method loads the based model by splitting the model onto all the GPUs and then trains the Lora adapter.
 
-Then, let's assume that with a batch size of 1 and a gradient accumulation of 16, there are 1000 steps in an epoch and we want to save and test every 0.1 epochs.  Lets also assume that the largest item in our dataset is 1024 tokens:
+Then, let's assume that with a batch size of 1 and a gradient accumulation of 16, there are 1000 steps in an epoch and we want to save and test every 0.1 epochs.  Let's also assume that the largest item in our dataset is 1024 tokens:
 
 ```
-python trl_finetune.py --block_size 1024 --eval_steps 100 --save_steps 100 -tf train.csv -vf validation.csv -m meta-llama/Llama-2-7b-hf -b 1 --log_steps 100 -lr 5e-6 -e 1 --gradient_accumulation_steps 16 --pad_token_id=18636 --split_model
+python trl_finetune.py --block_size 1024 --eval_steps 100 --save_steps 100 -tf train.csv -vf validation.csv -m meta-llama/Llama-2-7b-hf -b 1 --log_steps 100 -lr 2e-4 -e 1 --gradient_accumulation_steps 16 --pad_token_id=18636 --split_model
 ```
 
 ### trl QLora Finetuning
 
-For Qlora finetuning, it uses even less resources than full Lora but is a bit slower.  Since, this shrinks the base model, it makes it possible to train larger models. 
+For Qlora finetuning, it uses even fewer resources than full Lora but is a bit slower.  Since this shrinks the base model, it makes it possible to train larger models. Since it shrinks the base model the benefit is also larger for larger models.
+
+7B goes from needing 14GB VRAM to 4-5GB saving 9-10GB.
+
+70B goes from needing 140GB VRAM to 36-38GB saving over 100GB VRAM.
+
+Thus QLora is a larger benefit for larger models.
 
 Options for running are:
 1. QLora int8
@@ -157,41 +163,41 @@ Options for running are:
 3. Qlora int8 split
 4. Qlora int4 split
 
-int 8 may or may not be faster.  I have not tested.  If its not, use int4
+int8 may or may not be faster.  I have not tested.  If it's not, use int4
 
 
 We can not use accelerate here, or at least there is no reason to do so and it may cause issues.  
 
 Option 1:
 
-Then, let's assume that with a batch size of 1 and a gradient accumulation of 16, there are 1000 steps in an epoch and we want to save and test every 0.1 epochs.  Lets also assume that the largest item in our dataset is 1024 tokens:
+Then, let's assume that with a batch size of 1 and a gradient accumulation of 16, there are 1000 steps in an epoch and we want to save and test every 0.1 epochs.  Let's also assume that the largest item in our dataset is 1024 tokens:
 
 ```
-python trl_finetune.py --block_size 1024 --eval_steps 100 --save_steps 100 -tf train.csv -vf validation.csv -m meta-llama/Llama-2-7b-hf -b 1 --log_steps 100 -lr 5e-6 -e 1 --gradient_accumulation_steps 16 --pad_token_id=18636 --use_int8
+python trl_finetune.py --block_size 1024 --eval_steps 100 --save_steps 100 -tf train.csv -vf validation.csv -m meta-llama/Llama-2-7b-hf -b 1 --log_steps 100 -lr 2e-4 -e 1 --gradient_accumulation_steps 16 --pad_token_id=18636 --use_int8
 ```
 
 Option 2:
 
-Then, let's assume that with a batch size of 1 and a gradient accumulation of 16, there are 1000 steps in an epoch and we want to save and test every 0.1 epochs.  Lets also assume that the largest item in our dataset is 1024 tokens:
+Then, let's assume that with a batch size of 1 and a gradient accumulation of 16, there are 1000 steps in an epoch and we want to save and test every 0.1 epochs.  Let's also assume that the largest item in our dataset is 1024 tokens:
 
 ```
-python trl_finetune.py --block_size 1024 --eval_steps 100 --save_steps 100 -tf train.csv -vf validation.csv -m meta-llama/Llama-2-7b-hf -b 1 --log_steps 100 -lr 5e-6 -e 1 --gradient_accumulation_steps 16 --pad_token_id=18636 --use_int4
+python trl_finetune.py --block_size 1024 --eval_steps 100 --save_steps 100 -tf train.csv -vf validation.csv -m meta-llama/Llama-2-7b-hf -b 1 --log_steps 100 -lr 2e-4 -e 1 --gradient_accumulation_steps 16 --pad_token_id=18636 --use_int4
 ```
 
 Option 3:
 
-Then, let's assume that with a batch size of 1 and a gradient accumulation of 16, there are 1000 steps in an epoch and we want to save and test every 0.1 epochs.  Lets also assume that the largest item in our dataset is 1024 tokens:
+Then, let's assume that with a batch size of 1 and a gradient accumulation of 16, there are 1000 steps in an epoch and we want to save and test every 0.1 epochs.  Let's also assume that the largest item in our dataset is 1024 tokens:
 
 ```
-python trl_finetune.py --block_size 1024 --eval_steps 100 --save_steps 100 -tf train.csv -vf validation.csv -m meta-llama/Llama-2-7b-hf -b 1 --log_steps 100 -lr 5e-6 -e 1 --gradient_accumulation_steps 16 --pad_token_id=18636 --use_int8 --split_model
+python trl_finetune.py --block_size 1024 --eval_steps 100 --save_steps 100 -tf train.csv -vf validation.csv -m meta-llama/Llama-2-7b-hf -b 1 --log_steps 100 -lr 2e-4 -e 1 --gradient_accumulation_steps 16 --pad_token_id=18636 --use_int8 --split_model
 ```
 
 Option 4:
 
-Then, let's assume that with a batch size of 1 and a gradient accumulation of 16, there are 1000 steps in an epoch and we want to save and test every 0.1 epochs.  Lets also assume that the largest item in our dataset is 1024 tokens:
+Then, let's assume that with a batch size of 1 and a gradient accumulation of 16, there are 1000 steps in an epoch and we want to save and test every 0.1 epochs.  Let's also assume that the largest item in our dataset is 1024 tokens:
 
 ```
-python trl_finetune.py --block_size 1024 --eval_steps 100 --save_steps 100 -tf train.csv -vf validation.csv -m meta-llama/Llama-2-7b-hf -b 1 --log_steps 100 -lr 5e-6 -e 1 --gradient_accumulation_steps 16 --pad_token_id=18636 --use_int4 --split_model
+python trl_finetune.py --block_size 1024 --eval_steps 100 --save_steps 100 -tf train.csv -vf validation.csv -m meta-llama/Llama-2-7b-hf -b 1 --log_steps 100 -lr 2e-4 -e 1 --gradient_accumulation_steps 16 --pad_token_id=18636 --use_int4 --split_model
 ```
 
 
