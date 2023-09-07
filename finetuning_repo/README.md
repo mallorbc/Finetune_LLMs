@@ -69,6 +69,12 @@ You can find more information on creating a dataset from this [video](https://ww
 
 ## Finetuning Arguments
 
+Some of the code requires a HuggingFace access token to properly work.
+To do this set you HF_TOKEN environment variable to your HuggingFace token:
+```export HF_TOKEN=<replace with token```
+
+You can get your token under settings of the Huggingface website.
+
 Training and finetuning a model is equal parts art and science.  If you want the best model possible, you are going to need to do a hyperparameter sweep, meaning run with many different learning rates, weight decay, etc.
 
 The values and flags in the ```example_run.txt``` are a good starting point.  Training arguments that are supported include those used in the ```transformers``` library.  See [here](https://huggingface.co/docs/transformers/v4.25.1/en/main_classes/trainer#transformers.TrainingArguments) for all possible flags.
