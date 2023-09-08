@@ -57,6 +57,8 @@ RUN pip install ninja packaging
 
 RUN MAX_JOBS=4 pip install flash-attn --no-build-isolation
 
+RUN pip install rich
+
 WORKDIR /workspace
 
 CMD ["bash"]
