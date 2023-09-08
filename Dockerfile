@@ -53,6 +53,10 @@ RUN pip install --upgrade torch
 
 RUN pip install trl
 
+RUN pip install ninja packaging
+
+RUN MAX_JOBS=4 pip install flash-attn --no-build-isolation
+
 WORKDIR /workspace
 
 CMD ["bash"]
