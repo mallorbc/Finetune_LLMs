@@ -22,10 +22,7 @@ See the old video for the original repo code [here](https://www.youtube.com/watc
 
 A more updated video for using the Huggingface model can be seen [here](https://www.youtube.com/watch?v=bLMbnHunL_E&t=75s)
 
-1. First create a conda environment and enter the environment
-2. Run the ```./install_requirements.sh``` script
-3. Then you want to copy the data from ```train.csv``` and ```validation.csv``` from ```/quotes_dataset``` to the ```/finetuning_repo``` folder
-4. Run the finetuning code with appropriate flags to fine-tune the model. See ```example_run.txt``` inside the ```finetuning_repo```
+Go to the ```original_youtube``` branch is you want to see the code, but I HIGHLY recommend you use more modern methods
 
 ## Updated Docker Walkthrough(Use This Under Normal Conditions)
 
