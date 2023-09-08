@@ -5,15 +5,15 @@ from datasets import Dataset
 import torch
 import logging
 import os
-from peft import LoraConfig, TaskType,get_peft_model
+from peft import LoraConfig, TaskType,get_peft_model,prepare_model_for_kbit_training
 import pandas as pd
-from accelerate import Accelerator
 
 
 
 
-logger = logging.getLogger(__name__)
 
+from utils import get_logger
+logger = get_logger("finetune", "info")
 
 
 if __name__ == "__main__":
@@ -47,23 +47,58 @@ if __name__ == "__main__":
     parser.add_argument("--use_int4", action="store_true", default=False)
     parser.add_argument("--use_int8", action="store_true", default=False)
     parser.add_argument("--disable_lora", action="store_true", default=False)
+    parser.add_argument("--disable_flash_attention", action="store_true", help="Disable flash attention", default=False)
+
     
     parser.add_argument("--pad_token_id", default=None, type=int, help="The end of sequence token.")
     parser.add_argument("--add_eos_token", action="store_true", help="Add EOS token to tokenizer", default=False)
     parser.add_argument("--add_bos_token",  action="store_true", help="Add BOS token to tokenizer", default=False)
     args = parser.parse_args()
 
-
-    if "WANDB_PROJECT" not in os.environ:
-        os.environ["WANDB_PROJECT"] = "GPT_finetuning"
-
     if args.token is None:
         access_token = os.getenv("HF_TOKEN", "")
     else:
         access_token = args.token
 
+    config_kwargs = {
+        "trust_remote_code": True if args.trust_remote_code else None,
+        "token":access_token
+    }
+    config = AutoConfig.from_pretrained(args.model_name, **config_kwargs)
+
+    config.use_cache = False
+    config_dict = config.to_dict()
+    model_type = config_dict["model_type"]
+    num_layers = config_dict["num_hidden_layers"]
+    if num_layers == 80:
+        logger.info("Model is 70B")
+        is_70B = True
+    else:
+        logger.info("Model is not 70B")
+        is_70B = False
+
+
+    if not args.disable_flash_attention and model_type != "llama":
+        args.disable_flash_attention = True
+        logger.info("Model is not llama, disabling flash attention...")
+    elif args.disable_flash_attention and model_type == "llama":
+        logger.info("Model is llama, could be using flash attention...")
+    elif not args.disable_flash_attention and torch.cuda.get_device_capability()[0] >= 8:
+        from llama_patch import replace_attn_with_flash_attn
+        logger.info("Using flash attention...")
+        replace_attn_with_flash_attn(is_70B=is_70B)
+        use_flash_attention = True
+    else:
+        use_flash_attention = False
+
+
+
+
+    if "WANDB_PROJECT" not in os.environ:
+        os.environ["WANDB_PROJECT"] = "GPT_finetuning"
+
     if args.split_model:
-        logger.info("Splitting the model across all available devices")
+        logger.info("Splitting the model across all available devices...")
         kwargs = {"device_map":"auto"}
     else:
         kwargs = {"device_map":None}
@@ -76,7 +111,7 @@ if __name__ == "__main__":
         tokenizer.pad_token_id = args.pad_token_id
 
     if tokenizer.pad_token_id is None:
-        logger.info("Pad token id is None, setting to eos token id")
+        logger.info("Pad token id is None, setting to eos token id...")
         tokenizer.pad_token_id = tokenizer.eos_token_id
 
 
@@ -108,18 +143,31 @@ if __name__ == "__main__":
         task_type=TaskType.CAUSAL_LM, inference_mode=False, r=args.lora_rank, lora_alpha=args.lora_alpha, lora_dropout=args.lora_dropout
     )
 
-    config_kwargs = {
-        "trust_remote_code": True if args.trust_remote_code else None,
-        "token":access_token
-    }
-    config = AutoConfig.from_pretrained(args.model_name, **config_kwargs)
-    config.use_cache = False
+
 
     torch_dtype = torch.bfloat16 if torch.cuda.is_bf16_supported() else torch.float16
     model = AutoModelForCausalLM.from_pretrained(args.model_name, token=access_token,quantization_config=bnb_config,trust_remote_code=args.trust_remote_code,torch_dtype=torch_dtype,config=config, **kwargs)
 
+
+    if use_flash_attention:
+        model.config.pretraining_tp = 1
+        if is_70B:
+            from llama_patch import forward70B
+            assert model.model.layers[0].self_attn.forward.__doc__ == forward70B.__doc__, "Model is not using flash attention"
+        else:
+            from llama_patch import forward7B13B
+            assert model.model.layers[0].self_attn.forward.__doc__ == forward7B13B.__doc__, "Model is not using flash attention"
+
     if not args.disable_lora:
-        logger.info("Using LORA")
+        logger.info("Using LORA...")
+        if args.use_int4 or args.use_int8:
+            logger.info("Preparing model for kbit training...")
+            model = prepare_model_for_kbit_training(model)
+            if not args.disable_flash_attention:
+                from llama_patch import upcast_layer_for_flash_attention
+                logger.info("Upcasting flash attention layers...")
+                model = upcast_layer_for_flash_attention(model, torch_dtype)
+        logger.info("Getting PEFT model...")
         model = get_peft_model(model, peft_config)
     else:
         logger.info("Using Full Finetuning")
