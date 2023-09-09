@@ -8,7 +8,7 @@ import os
 
 
 parser = argparse.ArgumentParser()
-parser.add_argument("-m","--model_name", type=str, default="EleutherAI/gpt-j-6B")
+parser.add_argument("-m","--model_name", type=str, default="meta-llama/Llama-2-7b-hf")
 parser.add_argument("-d","--dataset", type=str, default="./llama/")
 args = parser.parse_args()
 

@@ -53,6 +53,9 @@ if __name__ == "__main__":
     parser.add_argument("--pad_token_id", default=None, type=int, help="The end of sequence token.")
     parser.add_argument("--add_eos_token", action="store_true", help="Add EOS token to tokenizer", default=False)
     parser.add_argument("--add_bos_token",  action="store_true", help="Add BOS token to tokenizer", default=False)
+
+    parser.add_argument("--train_dataset_ratio",default=1.0,type=float,help="Ratio of the training dataset to use")
+    parser.add_argument("--validation_dataset_ratio",default=1.0,type=float,help="Ratio of the validation dataset to use")
     args = parser.parse_args()
 
     if args.token is None:
@@ -69,13 +72,7 @@ if __name__ == "__main__":
     config.use_cache = False
     config_dict = config.to_dict()
     model_type = config_dict["model_type"]
-    num_layers = config_dict["num_hidden_layers"]
-    if num_layers == 80:
-        logger.info("Model is 70B")
-        is_70B = True
-    else:
-        logger.info("Model is not 70B")
-        is_70B = False
+
 
 
     if not args.disable_flash_attention and model_type != "llama":
@@ -86,7 +83,7 @@ if __name__ == "__main__":
     elif not args.disable_flash_attention and torch.cuda.get_device_capability()[0] >= 8:
         from llama_patch import replace_attn_with_flash_attn
         logger.info("Using flash attention...")
-        replace_attn_with_flash_attn(is_70B=is_70B)
+        replace_attn_with_flash_attn()
         use_flash_attention = True
     else:
         use_flash_attention = False
@@ -150,13 +147,8 @@ if __name__ == "__main__":
 
 
     if use_flash_attention:
-        model.config.pretraining_tp = 1
-        if is_70B:
-            from llama_patch import forward70B
-            assert model.model.layers[0].self_attn.forward.__doc__ == forward70B.__doc__, "Model is not using flash attention"
-        else:
-            from llama_patch import forward7B13B
-            assert model.model.layers[0].self_attn.forward.__doc__ == forward7B13B.__doc__, "Model is not using flash attention"
+        from llama_patch import llama_forward_with_flash_attn
+        assert model.model.layers[0].self_attn.forward.__doc__ == llama_forward_with_flash_attn.__doc__, "Model is not using flash attention"
 
     if not args.disable_lora:
         logger.info("Using LORA...")
@@ -201,9 +193,14 @@ if __name__ == "__main__":
         fp16=False if torch.cuda.is_bf16_supported() else True,
     )
 
-
-    train_dataset = Dataset.from_pandas(pd.read_csv(args.train_file))
-    validation_dataset = Dataset.from_pandas(pd.read_csv(args.validation_file))
+    train_df = pd.read_csv(args.train_file)
+    if args.train_dataset_ratio < 1.0:
+        train_df = train_df.sample(frac=args.train_dataset_ratio)
+    train_dataset = Dataset.from_pandas(train_df)
+    validation_df = pd.read_csv(args.validation_file)
+    if args.validation_dataset_ratio < 1.0:
+        validation_df = validation_df.sample(frac=args.validation_dataset_ratio)
+    validation_dataset = Dataset.from_pandas(validation_df)
 
 
     # get trainer
