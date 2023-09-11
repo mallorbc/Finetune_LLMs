@@ -80,7 +80,7 @@ if __name__ == "__main__":
         logger.info("Model is not llama, disabling flash attention...")
     elif args.disable_flash_attention and model_type == "llama":
         logger.info("Model is llama, could be using flash attention...")
-    elif not args.disable_flash_attention and torch.cuda.get_device_capability()[0] >= 8:
+    if not args.disable_flash_attention and torch.cuda.get_device_capability()[0] >= 8:
         from llama_patch import replace_attn_with_flash_attn
         logger.info("Using flash attention...")
         replace_attn_with_flash_attn()
