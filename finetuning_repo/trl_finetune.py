@@ -74,19 +74,18 @@ if __name__ == "__main__":
     model_type = config_dict["model_type"]
 
 
+    use_flash_attention = False
 
     if not args.disable_flash_attention and model_type != "llama":
-        args.disable_flash_attention = True
         logger.info("Model is not llama, disabling flash attention...")
     elif args.disable_flash_attention and model_type == "llama":
         logger.info("Model is llama, could be using flash attention...")
     elif not args.disable_flash_attention and torch.cuda.get_device_capability()[0] >= 8:
         from llama_patch import replace_attn_with_flash_attn
-        logger.info("Using flash attention...")
+        logger.info("Using flash attention for llama...")
         replace_attn_with_flash_attn()
         use_flash_attention = True
-    else:
-        use_flash_attention = False
+
 
 
 
@@ -155,7 +154,7 @@ if __name__ == "__main__":
         if args.use_int4 or args.use_int8:
             logger.info("Preparing model for kbit training...")
             model = prepare_model_for_kbit_training(model)
-            if not args.disable_flash_attention:
+            if use_flash_attention:
                 from llama_patch import upcast_layer_for_flash_attention
                 logger.info("Upcasting flash attention layers...")
                 model = upcast_layer_for_flash_attention(model, torch_dtype)
