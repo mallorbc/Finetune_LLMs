@@ -8,3 +8,4 @@ peft
 scipy
 deepspeed
 langchain
+flash-attn
