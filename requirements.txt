@@ -8,4 +8,5 @@ peft
 scipy
 deepspeed
 langchain
-flash-attn
+trl
+rich
