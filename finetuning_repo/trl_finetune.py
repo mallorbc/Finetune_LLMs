@@ -27,7 +27,7 @@ if __name__ == "__main__":
     parser.add_argument("--lora_dropout", type=float, default=0.1)
 
     parser.add_argument("-lr","--learning_rate", type=float, default=1e-4)
-    parser.add_argument("--lr_scheduler_type", type=str, default="cosine")
+    parser.add_argument("--lr_scheduler_type", type=str, default="constant")
     parser.add_argument("--warmup_steps", type=int, default=10)
     parser.add_argument("--weight_decay", type=float, default=0.05)
     parser.add_argument("--output_dir", type=str, default="./checkpoints")
