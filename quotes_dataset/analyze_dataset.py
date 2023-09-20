@@ -10,6 +10,7 @@ import os
 parser = argparse.ArgumentParser()
 parser.add_argument("-m","--model_name", type=str, default="meta-llama/Llama-2-7b-hf")
 parser.add_argument("-d","--dataset", type=str, default="./llama/")
+parser.add_argument("--pad_token_id", type=int, default=None)
 args = parser.parse_args()
 
 access_token = os.getenv("HF_TOKEN", "")
@@ -29,8 +30,9 @@ combined_df = pd.concat([train_df, valid_df])
 all_sizes = []
 for index, row in tqdm(combined_df.iterrows(), total=len(combined_df)):
     text = row['text']
-    tokenized_text = tokenizer(text, return_tensors="np")
-    tokenized_size = np.shape(tokenized_text['input_ids'])[-1]
+    tokenized_text_input_ids = tokenizer(text, return_tensors="np")['input_ids']
+    tokenized_size = np.shape(tokenized_text_input_ids)[-1]
+    assert args.pad_token_id is None or args.pad_token_id not in tokenized_text_input_ids, "Pad token not in tokenized text"
     all_sizes.append(tokenized_size)
 
 print("Max size: ", max(all_sizes))
