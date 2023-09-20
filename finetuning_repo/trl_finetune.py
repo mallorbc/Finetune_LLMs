@@ -7,6 +7,21 @@ import logging
 import os
 from peft import LoraConfig, TaskType,get_peft_model,prepare_model_for_kbit_training
 import pandas as pd
+import bitsandbytes as bnb
+
+
+def find_all_linear_names(args, model):
+    cls = bnb.nn.Linear4bit if args.use_int4 else (bnb.nn.Linear8bitLt if args.use_int8 else torch.nn.Linear)
+    lora_module_names = set()
+    for name, module in model.named_modules():
+        if isinstance(module, cls):
+            names = name.split('.')
+            lora_module_names.add(names[0] if len(names) == 1 else names[-1])
+
+
+    # if 'lm_head' in lora_module_names: # needed for 16-bit
+    #     lora_module_names.remove('lm_head')
+    return list(lora_module_names)
 
 
 
@@ -34,7 +49,7 @@ if __name__ == "__main__":
     parser.add_argument("--log_steps",type=int, default=10)
     parser.add_argument("--eval_steps",type=int, default=10)
     parser.add_argument("--save_steps",type=int, default=10)
-    parser.add_argument("-e","--epochs",  type=int,default=1)
+    parser.add_argument("-e","--epochs",  type=float,default=1)
     parser.add_argument("-b","--batch_size", type=int, default=1)
     parser.add_argument("--gradient_accumulation_steps", type=int, default=1)
     parser.add_argument("--gradient_checkpointing", action="store_true", default=False)
@@ -48,6 +63,7 @@ if __name__ == "__main__":
     parser.add_argument("--use_int8", action="store_true", default=False)
     parser.add_argument("--disable_lora", action="store_true", default=False)
     parser.add_argument("--disable_flash_attention", action="store_true", help="Disable flash attention", default=False)
+    parser.add_argument("--all_linear", action="store_true", help="Use Lora on all linear layers", default=False)
 
     
     parser.add_argument("--pad_token_id", default=None, type=int, help="The end of sequence token.")
@@ -123,6 +139,7 @@ if __name__ == "__main__":
             bnb_4bit_use_double_quant=True,
         )
         optimizer = "adamw_bnb_8bit"
+        args.use_int8 = False
     elif args.use_int8:
         logger.info("Using int8 quantization")
         bnb_config = BitsAndBytesConfig(
@@ -134,15 +151,20 @@ if __name__ == "__main__":
         bnb_config = None
         optimizer = "adamw_torch"
 
-
-    peft_config = LoraConfig(
-        task_type=TaskType.CAUSAL_LM, inference_mode=False, r=args.lora_rank, lora_alpha=args.lora_alpha, lora_dropout=args.lora_dropout
-    )
-
-
-
     torch_dtype = torch.bfloat16 if torch.cuda.is_bf16_supported() else torch.float16
     model = AutoModelForCausalLM.from_pretrained(args.model_name, token=access_token,quantization_config=bnb_config,trust_remote_code=args.trust_remote_code,torch_dtype=torch_dtype,config=config, **kwargs)
+
+    if args.all_linear:
+        target_modules = find_all_linear_names(args, model)
+        logger.info("Using LORA on all linear layers: %s", target_modules)
+    else:
+        target_modules = None
+        logger.info("Using LORA on default layers")
+
+
+    peft_config = LoraConfig(
+        task_type=TaskType.CAUSAL_LM, inference_mode=False, r=args.lora_rank, lora_alpha=args.lora_alpha, lora_dropout=args.lora_dropout,target_modules=target_modules
+    )
 
 
     if use_flash_attention:
