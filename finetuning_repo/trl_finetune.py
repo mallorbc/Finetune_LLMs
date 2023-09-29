@@ -154,17 +154,15 @@ if __name__ == "__main__":
     torch_dtype = torch.bfloat16 if torch.cuda.is_bf16_supported() else torch.float16
     model = AutoModelForCausalLM.from_pretrained(args.model_name, token=access_token,quantization_config=bnb_config,trust_remote_code=args.trust_remote_code,torch_dtype=torch_dtype,config=config, **kwargs)
 
-    if args.all_linear:
+    if not args.disable_lora and args.all_linear:
         target_modules = find_all_linear_names(args, model)
         logger.info("Using LORA on all linear layers: %s", target_modules)
-    else:
+    elif not args.disable_lora:
         target_modules = None
         logger.info("Using LORA on default layers")
 
 
-    peft_config = LoraConfig(
-        task_type=TaskType.CAUSAL_LM, inference_mode=False, r=args.lora_rank, lora_alpha=args.lora_alpha, lora_dropout=args.lora_dropout,target_modules=target_modules
-    )
+
 
 
     if use_flash_attention:
@@ -172,6 +170,9 @@ if __name__ == "__main__":
         assert model.model.layers[0].self_attn.forward.__doc__ == llama_forward_with_flash_attn.__doc__, "Model is not using flash attention"
 
     if not args.disable_lora:
+        peft_config = LoraConfig(
+            task_type=TaskType.CAUSAL_LM, inference_mode=False, r=args.lora_rank, lora_alpha=args.lora_alpha, lora_dropout=args.lora_dropout,target_modules=target_modules
+        )
         logger.info("Using LORA...")
         if args.use_int4 or args.use_int8:
             logger.info("Preparing model for kbit training...")
