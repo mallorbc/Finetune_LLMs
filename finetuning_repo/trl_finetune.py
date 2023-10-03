@@ -24,7 +24,7 @@ def find_all_linear_names(args, model):
     return list(lora_module_names)
 
 
-
+SUPPORTED_FLASH_MODELS = ["llama", "mistral", "falcon"]
 
 
 from utils import get_logger
@@ -92,18 +92,13 @@ if __name__ == "__main__":
 
     use_flash_attention = False
 
-    if not args.disable_flash_attention and model_type != "llama":
-        logger.info("Model is not llama, disabling flash attention...")
-    elif args.disable_flash_attention and model_type == "llama":
-        logger.info("Model is llama, could be using flash attention...")
+    if not args.disable_flash_attention and  model_type not in SUPPORTED_FLASH_MODELS:
+        logger.info("Model is not llama, mistral, or falcon disabling flash attention...")
+    elif args.disable_flash_attention and model_type in SUPPORTED_FLASH_MODELS:
+        logger.info("Model is llama, mistral or falcon could be using flash attention...")
     elif not args.disable_flash_attention and torch.cuda.get_device_capability()[0] >= 8:
-        from llama_patch import replace_attn_with_flash_attn
-        logger.info("Using flash attention for llama...")
-        replace_attn_with_flash_attn()
+        logger.info("Using flash attention...")
         use_flash_attention = True
-
-
-
 
 
     if "WANDB_PROJECT" not in os.environ:
@@ -152,7 +147,7 @@ if __name__ == "__main__":
         optimizer = "adamw_torch"
 
     torch_dtype = torch.bfloat16 if torch.cuda.is_bf16_supported() else torch.float16
-    model = AutoModelForCausalLM.from_pretrained(args.model_name, token=access_token,quantization_config=bnb_config,trust_remote_code=args.trust_remote_code,torch_dtype=torch_dtype,config=config, **kwargs)
+    model = AutoModelForCausalLM.from_pretrained(args.model_name, token=access_token,quantization_config=bnb_config,trust_remote_code=args.trust_remote_code,torch_dtype=torch_dtype,config=config,use_flash_attention_2=use_flash_attention, **kwargs)
 
     if not args.disable_lora and args.all_linear:
         target_modules = find_all_linear_names(args, model)
@@ -163,12 +158,6 @@ if __name__ == "__main__":
 
 
 
-
-
-    if use_flash_attention:
-        from llama_patch import llama_forward_with_flash_attn
-        assert model.model.layers[0].self_attn.forward.__doc__ == llama_forward_with_flash_attn.__doc__, "Model is not using flash attention"
-
     if not args.disable_lora:
         peft_config = LoraConfig(
             task_type=TaskType.CAUSAL_LM, inference_mode=False, r=args.lora_rank, lora_alpha=args.lora_alpha, lora_dropout=args.lora_dropout,target_modules=target_modules
@@ -177,10 +166,7 @@ if __name__ == "__main__":
         if args.use_int4 or args.use_int8:
             logger.info("Preparing model for kbit training...")
             model = prepare_model_for_kbit_training(model)
-            if use_flash_attention:
-                from llama_patch import upcast_layer_for_flash_attention
-                logger.info("Upcasting flash attention layers...")
-                model = upcast_layer_for_flash_attention(model, torch_dtype)
+
         logger.info("Getting PEFT model...")
         model = get_peft_model(model, peft_config)
         model.print_trainable_parameters()
