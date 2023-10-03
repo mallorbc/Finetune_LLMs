@@ -37,7 +37,7 @@ RUN pip install einops
 
 RUN pip install triton
 
-RUN pip install git+https://github.com/microsoft/DeepSpeed.git@v0.10.1
+RUN pip install git+https://github.com/microsoft/DeepSpeed.git@v0.10.3
 
 RUN pip install git+https://github.com/microsoft/DeepSpeed-MII.git
 
