@@ -182,6 +182,7 @@ if __name__ == "__main__":
                 model = upcast_layer_for_flash_attention(model, torch_dtype)
         logger.info("Getting PEFT model...")
         model = get_peft_model(model, peft_config)
+        model.print_trainable_parameters()
     else:
         logger.info("Using Full Finetuning")
 
