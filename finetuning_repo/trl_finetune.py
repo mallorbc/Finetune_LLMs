@@ -1,5 +1,5 @@
 import argparse
-from trl import SFTTrainer
+from trl import SFTTrainer, DataCollatorForCompletionOnlyLM
 from transformers import AutoTokenizer, AutoModelForCausalLM, BitsAndBytesConfig,TrainingArguments,AutoConfig
 from datasets import Dataset
 import torch
@@ -123,6 +123,8 @@ if __name__ == "__main__":
 
     parser.add_argument("--train_dataset_ratio",default=1.0,type=float,help="Ratio of the training dataset to use")
     parser.add_argument("--validation_dataset_ratio",default=1.0,type=float,help="Ratio of the validation dataset to use")
+
+    parser.add_argument("--completion_only", default=False,action="store_true", help="Only use completion loss")
     args = parser.parse_args()
 
     # replace_llama_attn(use_full=False)
@@ -314,6 +316,18 @@ if __name__ == "__main__":
         validation_df = validation_df.sample(frac=args.validation_dataset_ratio)
     validation_dataset = Dataset.from_pandas(validation_df)
 
+    if args.completion_only:
+        logger.info("Using completion only loss...")
+        logger.warning("Make sure to manually set this value in the code to a list of ids")
+        response_template = None
+        assert response_template is not None, "Response template must be set"
+        data_collator = DataCollatorForCompletionOnlyLM(
+            response_template=response_template,tokenizer=tokenizer
+        )
+        packing = False
+    else:
+        data_collator = None
+        packing = None
 
     # get trainer
     trainer = SFTTrainer(
@@ -324,6 +338,8 @@ if __name__ == "__main__":
         dataset_text_field="text",
         max_seq_length=block_size,
         tokenizer=tokenizer,
+        data_collator=data_collator,
+        packing=packing,
     )
 
     # train
