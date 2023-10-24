@@ -7,10 +7,58 @@ import logging
 import os
 from peft import LoraConfig, TaskType,get_peft_model,prepare_model_for_kbit_training
 import pandas as pd
+import math
 import bitsandbytes as bnb
+import transformers
+from typing import Dict
+from llama_attn_replace import replace_llama_attn
+from typing import List, Optional
 
 
-def find_all_linear_names(args, model):
+from utils import get_logger
+logger = get_logger("finetune", "info")
+
+
+def smart_tokenizer_and_embedding_resize(
+    special_tokens_dict: Dict,
+    tokenizer: transformers.PreTrainedTokenizer,
+    model: transformers.PreTrainedModel,
+    custom_tokens:Optional[List[str]]=None,
+):
+    """Resize tokenizer and embedding.
+
+    Note: This is the unoptimized version that may make your embedding size not be divisible by 64.
+    """
+
+    if len(list(special_tokens_dict.keys())) >0 or custom_tokens is not None:
+        logger.info("Resizing tokenizer and embedding...")
+        logger.info("Special tokens dict: %s", special_tokens_dict)
+        logger.info("Custom tokens: %s", custom_tokens)
+    else:
+        return False
+    num_new_tokens = len(list(special_tokens_dict.keys())) + (0 if custom_tokens is None else len(custom_tokens))
+    logger.info("Number of new tokens: %d", num_new_tokens)
+    if len(list(special_tokens_dict.keys())) > 0:
+        tokenizer.add_special_tokens(special_tokens_dict)
+    if custom_tokens is not None:
+        tokenizer.add_tokens(custom_tokens,special_tokens=True)
+
+    model.resize_token_embeddings(len(tokenizer))
+
+    if num_new_tokens > 0:
+        input_embeddings = model.get_input_embeddings().weight.data
+        output_embeddings = model.get_output_embeddings().weight.data
+
+        input_embeddings_avg = input_embeddings[:-num_new_tokens].mean(dim=0, keepdim=True)
+        output_embeddings_avg = output_embeddings[:-num_new_tokens].mean(dim=0, keepdim=True)
+
+        input_embeddings[-num_new_tokens:] = input_embeddings_avg
+        output_embeddings[-num_new_tokens:] = output_embeddings_avg
+    
+    return True
+
+
+def find_all_linear_names(args, model,add_lm_head=True):
     cls = bnb.nn.Linear4bit if args.use_int4 else (bnb.nn.Linear8bitLt if args.use_int8 else torch.nn.Linear)
     lora_module_names = set()
     for name, module in model.named_modules():
@@ -18,17 +66,17 @@ def find_all_linear_names(args, model):
             names = name.split('.')
             lora_module_names.add(names[0] if len(names) == 1 else names[-1])
 
-
-    # if 'lm_head' in lora_module_names: # needed for 16-bit
-    #     lora_module_names.remove('lm_head')
+    if add_lm_head and not "lm_head" in lora_module_names:
+        logger.info("Adding lm_head to lora_module_names")
+        lora_module_names.add("lm_head")
     return list(lora_module_names)
 
 
 SUPPORTED_FLASH_MODELS = ["llama", "mistral", "falcon"]
-
-
-from utils import get_logger
-logger = get_logger("finetune", "info")
+DEFAULT_PAD_TOKEN = "[PAD]"
+DEFAULT_EOS_TOKEN = "</s>"
+DEFAULT_BOS_TOKEN = "<s>"
+DEFAULT_UNK_TOKEN = "<unk>"
 
 
 if __name__ == "__main__":
@@ -64,15 +112,20 @@ if __name__ == "__main__":
     parser.add_argument("--disable_lora", action="store_true", default=False)
     parser.add_argument("--disable_flash_attention", action="store_true", help="Disable flash attention", default=False)
     parser.add_argument("--all_linear", action="store_true", help="Use Lora on all linear layers", default=False)
-
+    parser.add_argument("--long_lora", action="store_true", help="Use long lora settings", default=False)
+    parser.add_argument("--rope_scale", type=float,default=None)
     
     parser.add_argument("--pad_token_id", default=None, type=int, help="The end of sequence token.")
     parser.add_argument("--add_eos_token", action="store_true", help="Add EOS token to tokenizer", default=False)
     parser.add_argument("--add_bos_token",  action="store_true", help="Add BOS token to tokenizer", default=False)
+    parser.add_argument("--custom_tokens", default=None, type=str, help="Custom tokens to add to tokenizer")
+    parser.add_argument("--add_pad_token", action="store_true", help="Add PAD token to tokenizer", default=False)
 
     parser.add_argument("--train_dataset_ratio",default=1.0,type=float,help="Ratio of the training dataset to use")
     parser.add_argument("--validation_dataset_ratio",default=1.0,type=float,help="Ratio of the validation dataset to use")
     args = parser.parse_args()
+
+    # replace_llama_attn(use_full=False)
 
     if args.token is None:
         access_token = os.getenv("HF_TOKEN", "")
@@ -86,6 +139,18 @@ if __name__ == "__main__":
     config = AutoConfig.from_pretrained(args.model_name, **config_kwargs)
 
     config.use_cache = False
+
+    orig_ctx_len = getattr(config, "max_position_embeddings", None)
+    if orig_ctx_len and args.block_size > orig_ctx_len and args.rope_scale is None:
+        scaling_factor = float(math.ceil(args.block_size / orig_ctx_len))
+        config.rope_scaling = {"type": "linear", "factor": scaling_factor}
+        logger.info("Scaling context length by %f", scaling_factor)
+    elif args.rope_scale is not None:
+        scaling_factor = float(math.ceil(args.rope_scale))
+        logger.info("Scaling context length by %f", scaling_factor)
+        config.rope_scaling = {"type": "linear", "factor": scaling_factor}
+    else:
+        logger.info("Not scaling context length")
     config_dict = config.to_dict()
     model_type = config_dict["model_type"]
 
@@ -96,7 +161,7 @@ if __name__ == "__main__":
         logger.info("Model is not llama, mistral, or falcon disabling flash attention...")
     elif args.disable_flash_attention and model_type in SUPPORTED_FLASH_MODELS:
         logger.info("Model is llama, mistral or falcon could be using flash attention...")
-    elif not args.disable_flash_attention and torch.cuda.get_device_capability()[0] >= 8:
+    elif not args.disable_flash_attention:
         logger.info("Using flash attention...")
         use_flash_attention = True
 
@@ -111,15 +176,33 @@ if __name__ == "__main__":
         kwargs = {"device_map":None}
 
     tokenizer = AutoTokenizer.from_pretrained(args.model_name, token=access_token,trust_remote_code=args.trust_remote_code,add_eos_token=args.add_eos_token,add_bos_token=args.add_bos_token,use_fast=True)
+    custom_tokens = None
+    if args.custom_tokens is not None:
+        logger.info("Adding custom tokens to tokenizer...")
+        with open(args.custom_tokens,"r") as f:
+            custom_tokens = f.readlines()
+        custom_tokens = [token.strip() for token in custom_tokens]
+
+
+
+
     #THIS IS A HACK TO GET THE PAD TOKEN ID NOT TO BE EOS
     #good one for LLama is 18610
     if args.pad_token_id is not None:
         logger.info("Using pad token id %d", args.pad_token_id)
         tokenizer.pad_token_id = args.pad_token_id
+        tokenizer.pad_token = tokenizer.convert_ids_to_tokens(args.pad_token_id)
 
-    if tokenizer.pad_token_id is None:
-        logger.info("Pad token id is None, setting to eos token id...")
-        tokenizer.pad_token_id = tokenizer.eos_token_id
+
+    special_tokens_dict = dict()
+    if tokenizer.pad_token is None:
+        special_tokens_dict["pad_token"] = DEFAULT_PAD_TOKEN
+    if tokenizer.eos_token is None:
+        special_tokens_dict["eos_token"] = DEFAULT_EOS_TOKEN
+    if tokenizer.bos_token is None:
+        special_tokens_dict["bos_token"] = DEFAULT_BOS_TOKEN
+    if tokenizer.unk_token is None:
+        special_tokens_dict["unk_token"] = DEFAULT_UNK_TOKEN
 
 
     block_size = args.block_size
@@ -147,20 +230,39 @@ if __name__ == "__main__":
         optimizer = "adamw_torch"
 
     torch_dtype = torch.bfloat16 if torch.cuda.is_bf16_supported() else torch.float16
-    model = AutoModelForCausalLM.from_pretrained(args.model_name, token=access_token,quantization_config=bnb_config,trust_remote_code=args.trust_remote_code,torch_dtype=torch_dtype,config=config,use_flash_attention_2=use_flash_attention, **kwargs)
+    model = AutoModelForCausalLM.from_pretrained(args.model_name, token=access_token,quantization_config=bnb_config,trust_remote_code=args.trust_remote_code,torch_dtype=torch_dtype,config=config,use_flash_attention_2=True, **kwargs)
+    added_tokens = smart_tokenizer_and_embedding_resize(
+        special_tokens_dict=special_tokens_dict,
+        tokenizer=tokenizer,
+        model=model,
+        custom_tokens=custom_tokens
+    )
 
     if not args.disable_lora and args.all_linear:
         target_modules = find_all_linear_names(args, model)
         logger.info("Using LORA on all linear layers: %s", target_modules)
+        if added_tokens:
+            target_modules.pop(target_modules.index("lm_head"))
+            logger.info("Removing lm_head from target modules, will use in modules_to_save")
     elif not args.disable_lora:
         target_modules = None
         logger.info("Using LORA on default layers")
 
 
-
     if not args.disable_lora:
+        if args.long_lora:
+            logger.info("Using long lora settings...")
+            modules_to_save = ["embed_tokens","input_layernorm","post_attention_layernorm","norm"]
+
+            if added_tokens:
+                logger.info("Adding lm_head to modules_to_save")
+                modules_to_save.append("lm_head")
+        elif added_tokens:
+            modules_to_save = modules_to_save = ["embed_tokens","lm_head"]
+        else:
+            modules_to_save = None
         peft_config = LoraConfig(
-            task_type=TaskType.CAUSAL_LM, inference_mode=False, r=args.lora_rank, lora_alpha=args.lora_alpha, lora_dropout=args.lora_dropout,target_modules=target_modules
+            task_type=TaskType.CAUSAL_LM, inference_mode=False, r=args.lora_rank, lora_alpha=args.lora_alpha, lora_dropout=args.lora_dropout,target_modules=target_modules,modules_to_save=modules_to_save
         )
         logger.info("Using LORA...")
         if args.use_int4 or args.use_int8:
@@ -169,6 +271,7 @@ if __name__ == "__main__":
 
         logger.info("Getting PEFT model...")
         model = get_peft_model(model, peft_config)
+
         model.print_trainable_parameters()
     else:
         logger.info("Using Full Finetuning")
