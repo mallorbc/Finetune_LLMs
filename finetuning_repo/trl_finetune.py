@@ -18,6 +18,12 @@ from typing import List, Optional
 from utils import get_logger
 logger = get_logger("finetune", "info")
 
+SUPPORTED_FLASH_MODELS = ["llama", "mistral", "falcon"]
+DEFAULT_PAD_TOKEN = "[PAD]"
+DEFAULT_EOS_TOKEN = "</s>"
+DEFAULT_BOS_TOKEN = "<s>"
+DEFAULT_UNK_TOKEN = "<unk>"
+
 
 def smart_tokenizer_and_embedding_resize(
     special_tokens_dict: Dict,
@@ -71,12 +77,27 @@ def find_all_linear_names(args, model,add_lm_head=True):
         lora_module_names.add("lm_head")
     return list(lora_module_names)
 
+def get_config(args):
+    config_kwargs = {
+        "trust_remote_code": True if args.trust_remote_code else None,
+        "token":access_token
+    }
+    config = AutoConfig.from_pretrained(args.model_name, **config_kwargs)
 
-SUPPORTED_FLASH_MODELS = ["llama", "mistral", "falcon"]
-DEFAULT_PAD_TOKEN = "[PAD]"
-DEFAULT_EOS_TOKEN = "</s>"
-DEFAULT_BOS_TOKEN = "<s>"
-DEFAULT_UNK_TOKEN = "<unk>"
+    config.use_cache = False
+
+    orig_ctx_len = getattr(config, "max_position_embeddings", None)
+    if orig_ctx_len and args.block_size > orig_ctx_len and args.rope_scale is None:
+        scaling_factor = float(math.ceil(args.block_size / orig_ctx_len))
+        config.rope_scaling = {"type": "linear", "factor": scaling_factor}
+        logger.info("Scaling context length by %f", scaling_factor)
+    elif args.rope_scale is not None:
+        scaling_factor = float(math.ceil(args.rope_scale))
+        logger.info("Scaling context length by %f", scaling_factor)
+        config.rope_scaling = {"type": "linear", "factor": scaling_factor}
+    else:
+        logger.info("Not scaling context length")
+    return config
 
 
 if __name__ == "__main__":
@@ -134,25 +155,7 @@ if __name__ == "__main__":
     else:
         access_token = args.token
 
-    config_kwargs = {
-        "trust_remote_code": True if args.trust_remote_code else None,
-        "token":access_token
-    }
-    config = AutoConfig.from_pretrained(args.model_name, **config_kwargs)
-
-    config.use_cache = False
-
-    orig_ctx_len = getattr(config, "max_position_embeddings", None)
-    if orig_ctx_len and args.block_size > orig_ctx_len and args.rope_scale is None:
-        scaling_factor = float(math.ceil(args.block_size / orig_ctx_len))
-        config.rope_scaling = {"type": "linear", "factor": scaling_factor}
-        logger.info("Scaling context length by %f", scaling_factor)
-    elif args.rope_scale is not None:
-        scaling_factor = float(math.ceil(args.rope_scale))
-        logger.info("Scaling context length by %f", scaling_factor)
-        config.rope_scaling = {"type": "linear", "factor": scaling_factor}
-    else:
-        logger.info("Not scaling context length")
+    config = get_config(args)
     config_dict = config.to_dict()
     model_type = config_dict["model_type"]
 
