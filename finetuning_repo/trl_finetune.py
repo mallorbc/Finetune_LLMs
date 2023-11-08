@@ -14,6 +14,8 @@ from typing import Dict
 from llama_attn_replace import replace_llama_attn
 from typing import List, Optional
 from accelerate import Accelerator
+import numpy as np
+import random
 
 
 from utils import get_logger
@@ -24,6 +26,12 @@ DEFAULT_PAD_TOKEN = "[PAD]"
 DEFAULT_EOS_TOKEN = "</s>"
 DEFAULT_BOS_TOKEN = "<s>"
 DEFAULT_UNK_TOKEN = "<unk>"
+
+def seed_all(seed):
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed_all(seed)
+    np.random.seed(seed)
+    random.seed(seed)
 
 
 def smart_tokenizer_and_embedding_resize(
@@ -152,9 +160,12 @@ if __name__ == "__main__":
 
     parser.add_argument("--train_dataset_ratio",default=1.0,type=float,help="Ratio of the training dataset to use")
     parser.add_argument("--validation_dataset_ratio",default=1.0,type=float,help="Ratio of the validation dataset to use")
+    parser.add_argument("--seed",default=42,type=int,help="Seed for random number generators")
 
     parser.add_argument("--completion_only", default=False,action="store_true", help="Only use completion loss")
     args = parser.parse_args()
+
+    seed_all(args.seed)
 
     if args.lora_alpha is None:
         args.lora_alpha = args.lora_rank * 2
@@ -327,11 +338,11 @@ if __name__ == "__main__":
 
     train_df = pd.read_csv(args.train_file)
     if args.train_dataset_ratio < 1.0:
-        train_df = train_df.sample(frac=args.train_dataset_ratio)
+        train_df = train_df.sample(frac=args.train_dataset_ratio,random_state=args.seed)
     train_dataset = Dataset.from_pandas(train_df)
     validation_df = pd.read_csv(args.validation_file)
     if args.validation_dataset_ratio < 1.0:
-        validation_df = validation_df.sample(frac=args.validation_dataset_ratio)
+        validation_df = validation_df.sample(frac=args.validation_dataset_ratio,random_state=args.seed)
     validation_dataset = Dataset.from_pandas(validation_df)
 
     if args.completion_only:
