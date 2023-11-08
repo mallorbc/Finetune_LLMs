@@ -17,7 +17,7 @@ args = parser.parse_args()
 access_token = os.getenv("HF_TOKEN", "")
 
 
-tokenizer = AutoTokenizer.from_pretrained(args.model,token=access_token,add_eos_token=False,add_special_tokens=False,add_bos_token=False)
+tokenizer = AutoTokenizer.from_pretrained(args.model,token=access_token,add_eos_token=False,add_special_tokens=False,add_bos_token=False,trust_remote_code=True)
 
 if args.custom_tokens is not None:
     with open(args.custom_tokens) as f:
