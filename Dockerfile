@@ -19,6 +19,13 @@ RUN apt install python3.9 -y \
 && apt install python3-pip -y \
 && apt install python-is-python3 -y
 
+RUN apt install zsh -y 
+
+SHELL [ "/bin/zsh","-c" ]
+
+RUN sh -c "$(wget https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh -O -)"
+
+
 RUN pip install --upgrade pip setuptools wheel
 
 RUN pip install ninja
@@ -43,7 +50,7 @@ RUN pip install git+https://github.com/microsoft/DeepSpeed-MII.git
 
 RUN pip install wandb
 
-RUN pip install protobuf==3.20.*
+RUN pip install protobuf==3.20.1
 
 RUN pip install bitsandbytes
 
@@ -59,6 +66,8 @@ RUN MAX_JOBS=4 pip install flash-attn --no-build-isolation
 
 RUN pip install rich
 
+RUN pip install text-generation
+
 WORKDIR /workspace
 
-CMD ["bash"]
+CMD ["zsh"]
