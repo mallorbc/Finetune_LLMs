@@ -90,7 +90,7 @@ def find_all_linear_names(args, model,add_lm_head=True):
 def get_config(args):
     config_kwargs = {
         "trust_remote_code": True if args.trust_remote_code else None,
-        "token":access_token
+        "token":args.token
     }
     config = AutoConfig.from_pretrained(args.model_name, **config_kwargs)
 
@@ -177,6 +177,9 @@ if __name__ == "__main__":
         access_token = os.getenv("HF_TOKEN", "")
     else:
         access_token = args.token
+    
+    if args.token is None:
+        args.token = access_token
 
     config = get_config(args)
     config_dict = config.to_dict()
