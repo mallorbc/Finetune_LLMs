@@ -247,9 +247,10 @@ if __name__ == "__main__":
             bnb_4bit_compute_dtype=torch.bfloat16 if torch.cuda.is_bf16_supported() else torch.float16,
             bnb_4bit_use_double_quant=True,
         )
-        device_index = Accelerator().process_index
-        device_map = {"": device_index}
-        kwargs["device_map"] = device_map
+        if not args.split_model:
+            device_index = Accelerator().process_index
+            device_map = {"": device_index}
+            kwargs["device_map"] = device_map
         optimizer = "adamw_bnb_8bit"
         args.use_int8 = False
     elif args.use_int8:
