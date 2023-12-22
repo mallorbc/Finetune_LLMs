@@ -21,7 +21,7 @@ import random
 from utils import get_logger
 logger = get_logger("finetune", "info")
 
-SUPPORTED_FLASH_MODELS = ["llama", "mistral", "falcon"]
+SUPPORTED_FLASH_MODELS = ["llama", "mistral", "falcon","mixtral","opt"]
 DEFAULT_PAD_TOKEN = "[PAD]"
 DEFAULT_EOS_TOKEN = "</s>"
 DEFAULT_BOS_TOKEN = "<s>"
@@ -130,7 +130,7 @@ if __name__ == "__main__":
     parser.add_argument("--lr_scheduler_type", type=str, default="constant")
     parser.add_argument("--warmup_steps", type=int, default=10)
     parser.add_argument("--weight_decay", type=float, default=0.05)
-    parser.add_argument("--output_dir", type=str, default="./checkpoints")
+    parser.add_argument("-o","--output_dir", type=str, default="./checkpoints")
     parser.add_argument("--log_steps",type=int, default=10)
     parser.add_argument("--eval_steps",type=int, default=10)
     parser.add_argument("--save_steps",type=int, default=10)
