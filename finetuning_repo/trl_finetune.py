@@ -11,7 +11,6 @@ import math
 import bitsandbytes as bnb
 import transformers
 from typing import Dict
-from llama_attn_replace import replace_llama_attn
 from typing import List, Optional
 from accelerate import Accelerator
 import numpy as np
