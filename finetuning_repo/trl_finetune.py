@@ -11,7 +11,6 @@ import math
 import bitsandbytes as bnb
 import transformers
 from typing import Dict
-from llama_attn_replace import replace_llama_attn
 from typing import List, Optional
 from accelerate import Accelerator
 import numpy as np
@@ -151,6 +150,7 @@ if __name__ == "__main__":
     parser.add_argument("--all_linear", action="store_true", help="Use Lora on all linear layers", default=False)
     parser.add_argument("--long_lora", action="store_true", help="Use long lora settings", default=False)
     parser.add_argument("--rope_scale", type=float,default=None)
+    parser.add_argument("--dora", action="store_true", help="Use DORA", default=False)
     
     parser.add_argument("--pad_token_id", default=None, type=int, help="The end of sequence token.")
     parser.add_argument("--add_eos_token", action="store_true", help="Add EOS token to tokenizer", default=False)
@@ -171,7 +171,6 @@ if __name__ == "__main__":
         args.lora_alpha = args.lora_rank * 2
         logger.info("Lora alpha set to None... Setting lora_alpha to %d", args.lora_alpha)
 
-    # replace_llama_attn(use_full=False)
 
     if args.token is None:
         access_token = os.getenv("HF_TOKEN", "")
@@ -297,9 +296,12 @@ if __name__ == "__main__":
         else:
             modules_to_save = None
         peft_config = LoraConfig(
-            task_type=TaskType.CAUSAL_LM, inference_mode=False, r=args.lora_rank, lora_alpha=args.lora_alpha, lora_dropout=args.lora_dropout,target_modules=target_modules,modules_to_save=modules_to_save
+            task_type=TaskType.CAUSAL_LM, inference_mode=False, r=args.lora_rank, lora_alpha=args.lora_alpha, lora_dropout=args.lora_dropout,target_modules=target_modules,modules_to_save=modules_to_save,use_dora=args.dora
         )
-        logger.info("Using LORA...")
+        if args.dora:
+            logger.info("Using DORA...")
+        else:
+            logger.info("Using LORA...")
         if args.use_int4 or args.use_int8:
             logger.info("Preparing model for kbit training...")
             model = prepare_model_for_kbit_training(model,use_gradient_checkpointing=True if args.gradient_checkpointing else False)

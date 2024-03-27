@@ -28,7 +28,7 @@ RUN sh -c "$(wget https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools
 
 RUN pip install --upgrade pip setuptools wheel
 
-RUN pip install ninja
+RUN pip install ninja datasets pytest
 
 RUN pip install torch torchvision torchaudio
 
@@ -44,7 +44,7 @@ RUN pip install einops
 
 RUN pip install triton
 
-RUN pip install git+https://github.com/microsoft/DeepSpeed.git@v0.12.3
+RUN pip install git+https://github.com/microsoft/DeepSpeed.git@v0.14.0
 
 # RUN pip install git+https://github.com/microsoft/DeepSpeed-MII.git
 
